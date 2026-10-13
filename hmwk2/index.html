@@ -1,0 +1,1437 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet Seed to Ethereum Address</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400;1,6..72,600&display=swap">
+<style>
+/* Layout concept: the same terminal-on-lattice-paper look as HMWK 1, now following one value
+   (a mnemonic phrase) down a pipeline. Palette: black, green, gray, red, blue.
+   Red marks the final result, green the derived values, blue the operands and the inputs of a step. */
+:root {
+  color-scheme: dark;
+  /* black */
+  --bg: #040605;
+  --surface: #0c0f0d;
+  --surface-2: #151a17;
+  --term-bg: #000000;
+  /* gray */
+  --ink: #e6ebe7;
+  --muted: #8e9791;
+  --line: #28302b;
+  --term-fg: #d4dcd6;
+  --term-dim: #7b847e;
+  /* green: the main colour (links, buttons, curve points, the line through two points) */
+  --green: #3ddc84;
+  --accent: var(--green);
+  --accent-ink: #03120a;
+  --good: var(--green);
+  /* red: always the result (Q, the sum R, the third intersection) */
+  --hot: #ff5252;
+  --term-hot: #ff6b6b;
+  /* blue: the operands (G, P, Q in an addition) and the second data series */
+  --blue: #4da3ff;
+  --font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15.5px/1.62 var(--font-body);
+}
+[hidden] { display: none !important; }
+img, svg { max-width: 100%; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+sub, sup { line-height: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+.wrap { max-width: 1060px; margin-inline: auto; padding-inline: 16px; }
+.eyebrow {
+  margin: 0 0 6px; font: 600 11.5px/1.3 var(--font-body);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; font-family: var(--font-display); font-weight: 600; letter-spacing: -.01em; line-height: 1.12; }
+h1 { font-size: clamp(2.3rem, 6.2vw, 4rem); }
+h1 .arrow { color: var(--green); font-weight: 400; padding-inline: .06em; }
+h2 { font-size: clamp(1.6rem, 3.6vw, 2.2rem); margin-bottom: 14px; }
+h3 { font-size: 1.12rem; font-family: var(--font-body); font-weight: 600; letter-spacing: 0; }
+p { margin: 0 0 12px; }
+.lede { max-width: 62ch; font-size: 1.1rem; color: var(--muted); }
+.prose { max-width: 66ch; }
+.note { font-size: 13.5px; color: var(--muted); margin: 8px 0 0; }
+.note.err, .err { color: var(--hot); }
+
+/* ---------- nav ---------- */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-in { display: flex; align-items: center; gap: 18px; min-height: 46px; }
+.brand { font: 600 12px/1 var(--font-mono); letter-spacing: .06em; white-space: nowrap; color: var(--ink); }
+.nav nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.nav nav::-webkit-scrollbar { display: none; }
+.nav nav a { padding: 6px 10px; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: 13.5px; white-space: nowrap; }
+.nav nav a:hover { color: var(--ink); background: var(--surface-2); }
+
+/* ---------- hero ---------- */
+.hero { position: relative; padding-block: 44px 40px; border-bottom: 1px solid var(--line); overflow: hidden; }
+.hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--green) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--green) 16%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
+}
+.hero .wrap { position: relative; }
+.eq { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 12px; margin-top: 28px; }
+.eqbox { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px 11px; min-width: 0; }
+.eqbox .lab { display: block; font: 600 10.5px/1.2 var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.eqbox .val { font: 500 clamp(1.15rem, 4vw, 1.6rem)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.eqbox.k .val { color: var(--ink); }
+.eqbox .val.sm { font-size: clamp(.95rem, 3.2vw, 1.2rem); }
+.eqbox.q .val.sm { font-size: clamp(.95rem, 3vw, 1.2rem); }
+.eqbox.g .val { color: var(--blue); }
+.eqbox.q { border-color: var(--hot); box-shadow: 0 0 0 1px var(--hot) inset; }
+.eqbox.q .val { color: var(--hot); }
+.eqop { align-self: center; font: 400 1.7rem/1 var(--font-display); color: var(--muted); }
+.curve-line { margin-top: 16px; font: 500 14px/1.4 var(--font-mono); color: var(--muted); }
+
+/* ---------- sections ---------- */
+.block { padding-block: 44px; border-bottom: 1px solid var(--line); scroll-margin-top: 52px; }
+.block:last-of-type { border-bottom: 0; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-block: 18px; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; min-width: 0; }
+.panel h3 { margin-bottom: 10px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0 0 14px; }
+.kv dt { color: var(--muted); font-size: 13px; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+label { display: block; font: 600 12px/1.3 var(--font-body); letter-spacing: .04em; color: var(--muted); margin: 12px 0 5px; }
+input[type="text"], select, textarea {
+  width: 100%; max-width: 100%; font: 500 15px/1.3 var(--font-mono); color: var(--ink);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px;
+}
+select { font-family: var(--font-body); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row input[type="text"] { flex: 1 1 140px; width: auto; min-width: 0; }
+button {
+  font: 500 14px/1 var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 6px; padding: 9px 12px; cursor: pointer; min-height: 38px;
+}
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; }
+.seg button:first-child { border-radius: 6px 0 0 6px; }
+.seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+
+.law { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-family: var(--font-mono); font-size: 13.5px; }
+.law li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+.law .why { font: 400 12.5px/1.4 var(--font-body); color: var(--muted); }
+
+/* console output */
+.term-wrap { position: relative; margin-top: 4px; }
+.term {
+  margin: 0; background: var(--term-bg); color: var(--term-fg); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px;
+  font: 400 13.5px/1.65 var(--font-mono); overflow-x: auto; font-variant-numeric: tabular-nums; white-space: pre;
+}
+.term .dim { color: var(--term-dim); }
+.term .res { color: var(--term-hot); font-weight: 600; }
+.term-wrap button { position: absolute; top: 10px; right: 10px; min-height: 30px; padding: 6px 10px; font-size: 12px; background: transparent; color: var(--term-fg); border-color: color-mix(in srgb, var(--term-fg) 30%, transparent); }
+.callout {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-top: 14px;
+  padding: 14px 18px; border: 1px solid var(--hot); border-radius: 8px; background: var(--surface);
+}
+.callout .lab { font: 600 11.5px/1 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--hot); }
+.callout .big { font: 500 clamp(1.3rem, 4.4vw, 1.9rem)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* tables */
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font: 600 11px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--green); background: var(--surface-2); white-space: nowrap; }
+td.m { font-family: var(--font-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr.res td { background: color-mix(in srgb, var(--hot) 9%, var(--surface)); }
+.table-scroll.free td, .table-scroll.free th { white-space: normal; }
+
+.bits { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 16px; align-items: center; }
+.bits .chip { font: 600 15px/1 var(--font-mono); width: 32px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; }
+.bits .chip.one { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.bits .eqtext { font: 500 14px/1 var(--font-mono); color: var(--muted); margin-right: 6px; }
+
+/* ---------- charts ---------- */
+.chart { display: block; width: 100%; height: auto; }
+.ax { font: 9.5px var(--font-mono); fill: var(--muted); }
+.ax-line { stroke: var(--line); stroke-width: 1; }
+.bar { fill: var(--green); }
+.bar.alt { fill: var(--blue); }
+.exp-line { stroke: var(--hot); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.band-line { stroke: var(--hot); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.mid-line { stroke: var(--muted); stroke-width: 1; }
+.dot { fill: var(--green); }
+.dot.out { fill: var(--hot); }
+figure { margin: 0; min-width: 0; }
+.fig-cap { font: 600 11px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+
+/* ---------- new components ---------- */
+textarea { resize: vertical; min-height: 84px; line-height: 1.5; font-size: 14.5px; overflow-wrap: anywhere; }
+.hexv { font: 400 13px/1.55 var(--font-mono); overflow-wrap: anywhere; word-break: break-all; background: var(--surface-2); padding: 8px 10px; border-radius: 6px; display: block; }
+.hexv .dim { color: var(--muted); }
+.hexv .hot { color: var(--hot); font-weight: 600; }
+.hexv .grn { color: var(--green); }
+.hexv .blu { color: var(--blue); }
+.small-lab { display: block; font: 600 11px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 4px; }
+.small-lab:first-child { margin-top: 0; }
+.kind { display: inline-block; font: 600 10.5px/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; margin: 0 4px 4px 0; }
+.k-gen { color: var(--ink); }
+.k-der { color: var(--green); }
+.k-pub { color: var(--blue); }
+.k-hash { color: var(--muted); }
+.k-chk { color: var(--hot); }
+.k-enc { color: var(--muted); border-style: dashed; }
+.status { margin: 8px 0 0; font-size: 13.5px; }
+.status.ok { color: var(--green); }
+.status.bad { color: var(--hot); }
+.safety { font-size: 13px; color: var(--muted); border-left: 3px solid var(--hot); padding: 2px 0 2px 10px; margin: 14px 0 0; }
+.stages td.v { min-width: 0; width: 100%; }
+td .hexv { min-width: 210px; }
+.stages td { vertical-align: top; }
+.stages td.s { white-space: nowrap; font-weight: 600; }
+.stages tr.res td { background: color-mix(in srgb, var(--hot) 9%, var(--surface)); }
+.pathrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.pchip { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.pchip b { display: block; font: 500 17px/1.2 var(--font-mono); color: var(--green); }
+.pchip span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.pchip.on b { color: var(--blue); }
+.words { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0 4px; }
+.w { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.w .n { font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.w .bits { display: block; margin: 3px 0 2px; font: 400 12px/1.3 var(--font-mono); color: var(--muted); }
+.w .bits .cs { color: var(--hot); }
+.w .wd { font: 600 15px/1.2 var(--font-mono); color: var(--green); }
+.w .ix { font: 400 11.5px/1 var(--font-mono); color: var(--muted); margin-left: 6px; }
+.cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 4px; margin: 12px 0 6px; }
+.cell { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; text-align: center; padding: 4px 0 5px; font: 500 14px/1.35 var(--font-mono); }
+.cell i { display: block; font-style: normal; font-size: 11px; color: var(--muted); }
+.cell.up { border-color: var(--hot); }
+.cell.up b { color: var(--hot); }
+.cell b { display: block; font-weight: 600; }
+.timeline { list-style: none; margin: 18px 0 0; padding: 0; position: relative; }
+.timeline::before { content: ''; position: absolute; left: 61px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.timeline li { display: grid; grid-template-columns: 50px 22px minmax(0, 1fr); gap: 0 10px; padding: 0 0 18px; position: relative; }
+.timeline .yr { font: 600 15px/1.3 var(--font-mono); text-align: right; padding-top: 1px; }
+.timeline .dotm { width: 12px; height: 12px; border-radius: 50%; margin: 5px 0 0 5px; background: var(--ink); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line); position: relative; z-index: 1; }
+.timeline li.hash .dotm { background: var(--green); }
+.timeline li.pub .dotm { background: var(--blue); }
+.timeline li.std .dotm { background: var(--ink); }
+.timeline h3 { font-size: 1.02rem; margin-bottom: 2px; }
+.timeline p { margin: 0; font-size: 14px; color: var(--muted); max-width: 70ch; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.tl-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.meter { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); min-width: 90px; }
+.meter > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--green); }
+.meter > i { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--hot); }
+.runbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 10px 0 12px; }
+.runbar select { width: auto; font-family: var(--font-body); }
+.runbar .prog { font: 400 13px/1.3 var(--font-mono); color: var(--muted); }
+.find { font-size: 14px; margin: 10px 0 0; }
+.stat-line { font: 500 13px/1.5 var(--font-mono); color: var(--ink); margin: 8px 0 0; }
+code.inl { font-family: var(--font-mono); font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+pre.formula { margin: 8px 0 12px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font: 400 13px/1.6 var(--font-mono); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.table-scroll.free td, .table-scroll.free th { white-space: normal; }
+@media (max-width: 760px) { .table-scroll.free table { min-width: 820px; } .panel .table-scroll.free table { min-width: 520px; } .stages { min-width: 560px; } }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; align-items: stretch; margin: 16px 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.card h3 { margin-bottom: 2px; color: var(--green); }
+.card .std { font: 500 12px/1.3 var(--font-mono); color: var(--muted); margin-bottom: 8px; }
+.card p { margin: 0 0 6px; font-size: 14px; }
+.card .lab { font: 600 10.5px/1 var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+
+/* ---------- discussion ---------- */
+.verdict { font-weight: 600; white-space: nowrap; }
+.verdict.yes { color: var(--good); }
+.verdict.no { color: var(--muted); }
+.verdict.hash { color: var(--hot); }
+
+.block:last-of-type { padding-bottom: 64px; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+</style>
+<header class="nav">
+  <div class="wrap nav-in">
+    <span class="brand">HMWK 2</span>
+    <nav aria-label="Sections">
+      <a href="#pipeline">Pipeline</a>
+      <a href="#bip39">BIP-39</a>
+      <a href="#bip32">BIP-32/44</a>
+      <a href="#secp">secp256k1</a>
+      <a href="#keccak">Keccak-256</a>
+      <a href="#eip55">EIP-55</a>
+      <a href="#roles">Roles</a>
+      <a href="#history">History</a>
+      <a href="#stats">Statistics</a>
+      <a href="#why">Why several?</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">HMWK 2 · Hashing, key derivation and cryptographic primitives</p>
+    <h1>Wallet seed<span class="arrow"> → </span>Ethereum address</h1>
+    <p class="lede">A mnemonic phrase goes through BIP-39, BIP-32 / BIP-44, secp256k1, Keccak-256 and EIP-55 and comes out as a checksummed Ethereum address. Every value on this page is computed live in your browser.</p>
+    <div class="eq" aria-label="The pipeline in one line">
+      <div class="eqbox k"><span class="lab">Mnemonic</span><span class="val sm" id="hMnem">abandon … about</span></div>
+      <span class="eqop" aria-hidden="true">+</span>
+      <div class="eqbox g"><span class="lab">Derivation path</span><span class="val sm" id="hPath">m/44'/60'/0'/0/0</span></div>
+      <span class="eqop" aria-hidden="true">=</span>
+      <div class="eqbox q"><span class="lab">Ethereum address</span><span class="val sm" id="hAddr">0x…</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PIPELINE ============================ -->
+<section class="block" id="pipeline">
+  <div class="wrap">
+    <p class="eyebrow">Task · check the pipeline</p>
+    <h2>From mnemonic to checksummed address</h2>
+    <p class="prose">Mnemonic → BIP-39 → seed → BIP-32 / BIP-44 → private key → secp256k1 → public key → Keccak-256 → address → EIP-55 → checksummed address. Change the phrase, the passphrase or the path and every stage below is recomputed.</p>
+
+    <div class="cols">
+      <div class="panel">
+        <h3>Input</h3>
+        <label for="mnem">Mnemonic phrase (12, 15, 18, 21 or 24 words)</label>
+        <textarea id="mnem" rows="3" autocomplete="off" autocapitalize="none" spellcheck="false">abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about</textarea>
+        <div class="row" style="margin-top:8px">
+          <button type="button" id="btnTest">Test phrase</button>
+          <button type="button" id="btnGen12">Generate 12 words</button>
+          <button type="button" id="btnGen24">Generate 24 words</button>
+        </div>
+        <p class="status" id="mnemStatus" role="status"></p>
+        <label for="pass">Passphrase (optional, the "25th word")</label>
+        <input type="text" id="pass" value="" autocomplete="off" spellcheck="false">
+        <label for="path">Derivation path</label>
+        <input type="text" id="path" value="m/44'/60'/0'/0/0" autocomplete="off" spellcheck="false">
+        <p class="status bad" id="pathErr" role="alert"></p>
+        <p class="safety">Learning tool only. Never type the phrase of a wallet that holds real funds into a web page, and never use a phrase generated here. The test phrase is public: anything sent to its addresses is lost.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Compare with a real wallet</h3>
+        <p class="note" style="margin-top:0">MetaMask, Rabby, Rainbow, Exodus and similar wallets run exactly this pipeline. To see it from the outside:</p>
+        <ol class="note" style="padding-left:20px;margin:6px 0 0">
+          <li>Use a fresh, empty wallet (or a test profile). Choose "import with a recovery phrase" and enter the test phrase.</li>
+          <li>The first Ethereum account must be the address in the red box above: <span class="mono">0x9858EfFD…Eda94</span> for the test phrase.</li>
+          <li>Add a second account: it is the next <span class="mono">address_index</span> (the table in the BIP-32 / BIP-44 section lists the first five).</li>
+          <li>In a wallet that supports a passphrase (hardware wallets and some software wallets), enter one: a completely different set of addresses appears, with no error.</li>
+          <li>Wallets show the words (once, at creation), the address, and the private key only on an explicit export. They do not show the seed.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="stages">
+        <thead><tr><th>Stage</th><th>Standard or primitive</th><th>Kind of operation</th><th>Value</th></tr></thead>
+        <tbody id="stageBody"></tbody>
+      </table>
+    </div>
+    <p class="note">The "kind" column uses the six words of the assignment: generation, derivation, public-key cryptography, hashing, checksum and encoding. The Roles section defines them.</p>
+  </div>
+</section>
+
+<!-- ============================ BIP-39 ============================ -->
+<section class="block" id="bip39">
+  <div class="wrap">
+    <p class="eyebrow">BIP-39 · mnemonic sentence and seed</p>
+    <h2>Words in, 512-bit seed out</h2>
+    <p class="prose"><strong>Role.</strong> BIP-39 turns random bytes into words a person can write down, and turns those words into the seed that the rest of the pipeline starts from. The last bits of the phrase are a checksum, so most typos are caught when the phrase is entered.</p>
+
+    <div class="small-lab">1 · entropy (key generation) and its checksum</div>
+    <pre class="formula" id="bip39Math"></pre>
+    <div class="words" id="wordGrid"></div>
+
+    <div class="small-lab">2 · seed (key derivation)</div>
+    <pre class="formula">seed = PBKDF2( password = mnemonic,  salt = "mnemonic" + passphrase,
+               PRF = HMAC-SHA512,  iterations = 2048,  length = 64 bytes )</pre>
+    <span class="hexv" id="seedHex"></span>
+    <p class="note">The 2048 iterations make every guess of a phrase cost 2048 HMAC computations. The passphrase goes into the salt, so a different passphrase gives an unrelated seed and never an error message. The seed does not depend on which language or word list was used, only on the exact text.</p>
+  </div>
+</section>
+
+<!-- ============================ BIP-32 / 44 ============================ -->
+<section class="block" id="bip32">
+  <div class="wrap">
+    <p class="eyebrow">BIP-32 and BIP-44 · hierarchical deterministic wallets</p>
+    <h2>One seed, a tree of private keys</h2>
+    <p class="prose"><strong>BIP-32 role.</strong> One seed produces a whole tree of private keys, so a single backup covers every account ever created. Each node is made from its parent with HMAC-SHA512. <strong>BIP-44 role.</strong> It fixes what the levels of the tree mean, so a wallet and the next one agree where to look for account number N.</p>
+
+    <div class="small-lab">1 · master key</div>
+    <pre class="formula">I = HMAC-SHA512( key = "Bitcoin seed",  data = seed )
+master private key = I[0..31]       chain code = I[32..63]</pre>
+    <span class="hexv" id="masterOut"></span>
+
+    <div class="small-lab">2 · the BIP-44 path <span class="mono" id="pathEcho"></span></div>
+    <div class="pathrow" id="pathChips"></div>
+    <p class="note" id="pathNote"></p>
+
+    <div class="small-lab">3 · child key derivation, one level at a time</div>
+    <pre class="formula">hardened step (index >= 2^31, written i'):
+    data = 0x00 || parent private key || index
+normal step:
+    data = compressed parent public key || index
+
+I = HMAC-SHA512( key = parent chain code, data )
+child private key = ( I[0..31] + parent private key ) mod n
+child chain code  = I[32..63]</pre>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Node</th><th>Kind</th><th>Child private key</th><th>Chain code</th></tr></thead>
+        <tbody id="levelBody"></tbody>
+      </table>
+    </div>
+    <p class="note">Hardened steps mix in the parent private key, so knowing a child key together with the parent chain code does not reveal the parent. Normal steps use only the public key, which lets a watch-only tool derive addresses without any private key. Wallets differ in what they increment: MetaMask changes the last number (<span class="mono">…/0/1</span>), Ledger Live changes the account (<span class="mono">…/1'/0/0</span>).</p>
+
+    <div class="small-lab">4 · the first five addresses of this account</div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Path</th><th>Address</th></tr></thead>
+        <tbody id="nextBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SECP256K1 ============================ -->
+<section class="block" id="secp">
+  <div class="wrap">
+    <p class="eyebrow">secp256k1 · elliptic-curve public-key cryptography</p>
+    <h2>Private key to public key</h2>
+    <p class="prose"><strong>Role.</strong> This is the step of HMWK 1 at full size. The private key k is a number below n and the public key is the curve point Q = k·G. Going from k to Q is fast, going back from Q to k is believed to be infeasible, and that one-way relationship is what lets a signature prove ownership of an address without revealing k.</p>
+
+    <pre class="formula">curve  y^2 = x^3 + 7 over F_p,   p = 2^256 - 2^32 - 977
+G      = (79BE667E...F81798, 483ADA77...D4B8)
+n      = order of G, about 1.158 x 10^77 (prime)
+Q = k*G, computed by double-and-add</pre>
+    <div class="small-lab">private key k</div>
+    <span class="hexv" id="kHex"></span>
+    <div class="small-lab">public key Q = k·G</div>
+    <span class="hexv" id="qHex"></span>
+    <div class="small-lab">encodings of the same point</div>
+    <span class="hexv" id="qEnc"></span>
+    <p class="stat-line" id="secpFacts"></p>
+    <p class="note">Same equation as HMWK 1 with a 256-bit prime instead of 17. The toy curve could be solved by trying all 18 points; here the best known generic attacks need about 2¹²⁸ steps. The address uses the 64-byte form (x ‖ y). The 33-byte compressed form is what BIP-32 hashes for normal child keys.</p>
+  </div>
+</section>
+
+<!-- ============================ KECCAK ============================ -->
+<section class="block" id="keccak">
+  <div class="wrap">
+    <p class="eyebrow">Keccak-256 · hashing</p>
+    <h2>Public key to address</h2>
+    <p class="prose"><strong>Role.</strong> A hash function squeezes input of any length into a fixed-size digest in a way that cannot be reversed. Ethereum hashes the 64-byte public key (x ‖ y, without the 04 prefix) and keeps the last 20 bytes. The address is therefore a short fingerprint of the public key.</p>
+
+    <div class="small-lab">input: x ‖ y (64 bytes)</div>
+    <span class="hexv" id="kecIn"></span>
+    <div class="small-lab">Keccak-256 (32 bytes): the first 12 are dropped, the last 20 are the address</div>
+    <span class="hexv" id="kecOut"></span>
+
+    <h3 style="margin-top:26px">Keccak-256 is not SHA3-256</h3>
+    <p class="prose">Both use the same sponge: the 1600-bit permutation Keccak-f[1600], rate 1088 bits, capacity 512 bits. They differ only in the padding. Keccak, as submitted to the NIST competition, appends the byte <span class="mono">0x01</span> and then the closing <span class="mono">0x80</span>. The standard SHA-3 (FIPS 202) appends <span class="mono">0x06</span> first, which carries two extra domain-separation bits. One different input byte gives a completely different digest, so a SHA3-256 library cannot compute Ethereum addresses.</p>
+    <div class="cols">
+      <div class="panel">
+        <h3>Try it</h3>
+        <label for="labIn">Text to hash</label>
+        <input type="text" id="labIn" value="" placeholder="type anything, the empty string is shown first" autocomplete="off" spellcheck="false">
+        <div class="small-lab">Keccak-256 (Ethereum)</div><span class="hexv" id="labKec"></span>
+        <div class="small-lab">SHA3-256 (NIST, FIPS 202)</div><span class="hexv" id="labSha3"></span>
+        <div class="small-lab">SHA-256 (SHA-2)</div><span class="hexv" id="labSha256"></span>
+        <div class="small-lab">SHA-512 (SHA-2)</div><span class="hexv" id="labSha512"></span>
+      </div>
+      <div class="panel">
+        <h3>SHA-2 and Keccak / SHA-3</h3>
+        <div class="table-scroll free">
+          <table>
+            <thead><tr><th></th><th>SHA-2 (SHA-256, SHA-512)</th><th>Keccak / SHA-3</th></tr></thead>
+            <tbody>
+              <tr><td>Construction</td><td>Merkle–Damgård: a compression function applied block after block</td><td>Sponge: absorb blocks into a 1600-bit state, then squeeze</td></tr>
+              <tr><td>Standardised</td><td>2001–2002 (NIST, FIPS 180)</td><td>Keccak won the NIST contest in 2012, SHA-3 is FIPS 202 (2015)</td></tr>
+              <tr><td>Length extension</td><td>Possible on plain SHA-256 and SHA-512</td><td>Not possible</td></tr>
+              <tr><td>Used in this pipeline</td><td>SHA-256: BIP-39 checksum. SHA-512: PBKDF2 and HMAC for the seed and BIP-32 keys</td><td>Keccak-256: address and EIP-55</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ EIP-55 ============================ -->
+<section class="block" id="eip55">
+  <div class="wrap">
+    <p class="eyebrow">EIP-55 · mixed-case checksum encoding</p>
+    <h2>Address to checksummed address</h2>
+    <p class="prose"><strong>Role.</strong> A mistyped address sends money to the wrong place and cannot be recalled. EIP-55 adds error detection without changing the address bytes: hash the lowercase hex text with Keccak-256, then write each letter in upper case when the matching hash digit is 8 or more. Software that ignores case still reads the same address, and software that checks case catches typos.</p>
+    <div class="small-lab">hash of the lowercase address text (hex digit by digit)</div>
+    <span class="hexv" id="eipHash"></span>
+    <div class="cells" id="eipCells" aria-label="One cell per address character"></div>
+    <p class="note">Each cell shows the lowercase character, the hash digit at the same position, and the result. A letter whose hash digit is 8 to f turns upper case (red). Digits never change case.</p>
+    <div class="callout">
+      <span class="lab">Checksummed address</span>
+      <span class="big" id="eipAddr" style="font-size:clamp(1rem,3.4vw,1.5rem)"></span>
+    </div>
+
+    <h3 style="margin-top:24px">Check an address</h3>
+    <label for="chkIn">Paste an address</label>
+    <input type="text" id="chkIn" autocomplete="off" spellcheck="false" placeholder="0x…">
+    <p class="status" id="chkOut" role="status"></p>
+  </div>
+</section>
+
+<!-- ============================ ROLES ============================ -->
+<section class="block" id="roles">
+  <div class="wrap">
+    <p class="eyebrow">Role and purpose</p>
+    <h2>The six pieces and six kinds of operation</h2>
+    <div class="cards">
+      <div class="card"><h3>BIP-39</h3><div class="std">mnemonic sentence and seed</div><p><span class="lab">Role</span>Encodes 128 to 256 bits of entropy plus a checksum as 12 to 24 words, and stretches the phrase into a 512-bit seed.</p><p><span class="lab">Purpose</span>A backup a person can write down and check, that works across wallets.</p></div>
+      <div class="card"><h3>BIP-32</h3><div class="std">hierarchical deterministic keys</div><p><span class="lab">Role</span>Derives a tree of private keys and chain codes from the seed with HMAC-SHA512.</p><p><span class="lab">Purpose</span>One backup for unlimited accounts, and a way to hand out public keys without private keys.</p></div>
+      <div class="card"><h3>BIP-44</h3><div class="std">derivation paths</div><p><span class="lab">Role</span>Gives the levels of the BIP-32 tree a meaning: purpose, coin type (60 for Ethereum), account, change, address index.</p><p><span class="lab">Purpose</span>Two wallets that follow it find the same accounts from the same phrase.</p></div>
+      <div class="card"><h3>secp256k1</h3><div class="std">elliptic-curve public-key cryptography</div><p><span class="lab">Role</span>Turns a private key k into the public key Q = k·G, and is the curve used to sign transactions (ECDSA).</p><p><span class="lab">Purpose</span>A one-way relation between a secret and a public value, so ownership can be proved without revealing the secret.</p></div>
+      <div class="card"><h3>Keccak-256</h3><div class="std">hash function</div><p><span class="lab">Role</span>Hashes the public key, and the lowercase address for EIP-55, into 32 fixed bytes.</p><p><span class="lab">Purpose</span>A short, uniform fingerprint of the public key that cannot be inverted.</p></div>
+      <div class="card"><h3>EIP-55</h3><div class="std">mixed-case checksum encoding</div><p><span class="lab">Role</span>Hides a checksum in the capitalisation of the address letters.</p><p><span class="lab">Purpose</span>Detects typos and wrong pastes without changing the address format.</p></div>
+    </div>
+
+    <h3 style="margin-top:28px">Generation, derivation, public-key cryptography, hashing, checksum, encoding</h3>
+    <div class="table-scroll free">
+      <table>
+        <thead><tr><th>Concept</th><th>What it does</th><th>Where it appears</th><th>Secret input?</th><th>Reversible?</th></tr></thead>
+        <tbody>
+          <tr><td><span class="kind k-gen">Key generation</span></td><td>Creates new secret randomness. Nothing earlier determines the result.</td><td>The 128 or 256 bits of entropy behind a new mnemonic, drawn from the operating system's random number generator.</td><td>No input, only fresh randomness</td><td>Not applicable</td></tr>
+          <tr><td><span class="kind k-der">Key derivation</span></td><td>Computes keys deterministically from an existing secret plus context. The same inputs always give the same keys.</td><td>PBKDF2 (mnemonic to seed), HMAC-SHA512 (seed to master key, parent to child).</td><td>Yes</td><td>No (one-way). Only someone who has the input can recompute it</td></tr>
+          <tr><td><span class="kind k-pub">Public-key cryptography</span></td><td>A key pair where the public key is computed from the private key but the private key cannot be recovered from it.</td><td>secp256k1: Q = k·G, and ECDSA signatures.</td><td>Yes (the private key)</td><td>No, except by solving the discrete-log problem</td></tr>
+          <tr><td><span class="kind k-hash">Hashing</span></td><td>Maps any input to a fixed-size digest. One-way, no key, no secret.</td><td>Keccak-256 (address, EIP-55), SHA-256 (BIP-39 checksum), SHA-512 inside HMAC and PBKDF2.</td><td>No</td><td>No</td></tr>
+          <tr><td><span class="kind k-chk">Checksum</span></td><td>A few redundant bits that reveal accidental errors. It is not secret and stops nobody who is trying to cheat.</td><td>The last 4 bits of a 12-word phrase (BIP-39), the capitalisation of an address (EIP-55).</td><td>No</td><td>Recomputed, not reversed</td></tr>
+          <tr><td><span class="kind k-enc">Encoding</span></td><td>Changes the representation of the same information with no secrecy and no loss.</td><td>Bits to words (11 bits per word), bytes to hex, the 0x prefix, compressed public key format, 0x04 prefix, the case pattern of EIP-55.</td><td>No</td><td>Yes, by anyone</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose" style="margin-top:14px">EIP-55 sits on the border: the checksum is computed with a hash but is carried by an encoding trick (letter case). The BIP-39 phrase is also mixed: encoding of the entropy, plus a checksum, and the seed derived from it uses key derivation. Key generation happens once, at the very start. Everything after it is deterministic: the same phrase gives the same address on every wallet.</p>
+  </div>
+</section>
+
+<!-- ============================ HISTORY ============================ -->
+<section class="block" id="history">
+  <div class="wrap">
+    <p class="eyebrow">Temporal and historical context</p>
+    <h2>Four decades, seven milestones</h2>
+    <p class="prose">The mathematical tools are old and the wallet standards are young. RSA (1977) and SHA-2 (2001) are 24 years apart, while the other five items, from BIP-32 to EIP-55, all fall in the five years from 2012 to 2016.</p>
+    <ol class="timeline">
+      <li class="pub"><span class="yr">1977</span><span class="dotm"></span><div><h3>RSA: public-key cryptography</h3><p>The first practical system where encryption and signing use a public and a private key. Ethereum does not use RSA but elliptic curves, which rely on the same idea of a one-way relation between two keys.</p></div></li>
+      <li class="hash"><span class="yr">2001</span><span class="dotm"></span><div><h3>SHA-2 / SHA-512</h3><p>NIST announces SHA-256, SHA-384 and SHA-512 in 2001 (FIPS 180-2 follows in 2002). Here SHA-256 builds the BIP-39 checksum and SHA-512 sits inside PBKDF2 and HMAC.</p></div></li>
+      <li class="std"><span class="yr">2012</span><span class="dotm"></span><div><h3>BIP-32: hierarchical deterministic wallets</h3><p>One seed, a tree of keys. Before it, wallets stored a pool of unrelated random keys and every new key made the backup out of date.</p></div></li>
+      <li class="std"><span class="yr">2013</span><span class="dotm"></span><div><h3>BIP-39: mnemonic code</h3><p>Makes the seed writable and checkable as 12 to 24 words.</p></div></li>
+      <li class="std"><span class="yr">2014</span><span class="dotm"></span><div><h3>BIP-44: multi-account hierarchy</h3><p>Standard paths: purpose, coin type, account, change, index. Ethereum wallets later reuse it with coin type 60.</p></div></li>
+      <li class="hash"><span class="yr">2015</span><span class="dotm"></span><div><h3>SHA-3, based on Keccak</h3><p>Keccak won NIST's hash competition in 2012 and FIPS 202 standardised SHA-3 in 2015, with different padding than the original submission. Ethereum had chosen the original Keccak before the standard was final and kept it, which is why Keccak-256 and SHA3-256 differ.</p></div></li>
+      <li class="std"><span class="yr">2016</span><span class="dotm"></span><div><h3>EIP-55: mixed-case checksum addresses</h3><p>Typo protection for addresses that needs no change to the address itself.</p></div></li>
+    </ol>
+    <div class="tl-legend" aria-hidden="true">
+      <span><i style="background:var(--blue)"></i>public-key cryptography</span>
+      <span><i style="background:var(--green)"></i>hash functions</span>
+      <span><i style="background:var(--ink)"></i>wallet standards</span>
+    </div>
+    <p class="prose" style="margin-top:14px">The order explains the design. The hash functions and public-key cryptography existed first. The wallet standards then built key management on top of them (2012 to 2014), and the Ethereum-specific pieces, Keccak-256 and the checksum, came last. The pipeline reads from the top down in this page and from the oldest primitive to the newest one in the timeline.</p>
+  </div>
+</section>
+
+<!-- ============================ STATISTICS ============================ -->
+<section class="block" id="stats">
+  <div class="wrap">
+    <p class="eyebrow">Statistical properties</p>
+    <h2>What do the steps do to the bits?</h2>
+    <p class="prose">Random inputs go through the real functions of this page. Three questions: does a small change in the input spread over the output (avalanche), do the resulting addresses look uniformly random, and how many mistakes do the two checksums catch. Runs start when the section scrolls into view, and again whenever you press Run.</p>
+
+    <div class="card" style="margin-top:16px">
+      <h3>1 · Avalanche at every step</h3>
+      <p>Flip one random bit of the input of a step, run the step again and count how many output bits change. A well-mixing function changes half of them.</p>
+      <div class="runbar"><label for="avN" style="margin:0">Trials per step</label><select id="avN"><option>30</option><option selected>60</option><option>200</option></select><button type="button" id="avRun">Run</button><span class="prog" id="avProg"></span></div>
+      <div class="table-scroll free"><table>
+        <thead><tr><th>Step</th><th>One flipped bit in</th><th>Measured on</th><th>Mean changed</th><th></th><th>Reading</th></tr></thead>
+        <tbody id="avBody"><tr><td colspan="6" class="note">Waiting to run.</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3>2 · Are addresses uniform?</h3>
+      <p>Random private keys go through secp256k1 and Keccak-256 to addresses. If the pipeline output is uniform, every hex digit and every bit of the address is equally likely.</p>
+      <div class="runbar"><label for="dsN" style="margin:0">Addresses</label><select id="dsN"><option>500</option><option selected>1000</option><option>3000</option></select><button type="button" id="dsRun">Run</button><span class="prog" id="dsProg"></span></div>
+      <div id="dsOut"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3>3 · How good are the checksums?</h3>
+      <p>Break phrases and addresses on purpose and see how often the checksum still passes.</p>
+      <div class="runbar"><label for="ckN" style="margin:0">Trials per row</label><select id="ckN"><option>5000</option><option selected>10000</option><option>50000</option></select><button type="button" id="ckRun">Run</button><span class="prog" id="ckProg"></span></div>
+      <div class="table-scroll free"><table>
+        <thead><tr><th>Mistake</th><th>Accepted by the checksum</th><th>Expected</th></tr></thead>
+        <tbody id="ckBody"><tr><td colspan="3" class="note">Waiting to run.</td></tr></tbody>
+      </table></div>
+      <p class="find" id="ckFind"></p>
+    </div>
+
+    <h3 style="margin-top:26px">Which properties matter for which step</h3>
+    <div class="table-scroll free"><table>
+      <thead><tr><th>Step</th><th>Avalanche</th><th>Uniform output</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Keccak-256, SHA-512 (hashing, HMAC, PBKDF2)</strong></td><td><span class="verdict hash">Required</span></td><td><span class="verdict hash">Required</span></td><td>Outputs must be indistinguishable from random and unrelated to similar inputs. This is what makes the address a fingerprint and the seed unguessable.</td></tr>
+        <tr><td><strong>secp256k1</strong></td><td><span class="verdict no">Not a goal</span></td><td><span class="verdict no">Not a goal</span></td><td>Security rests on the hardness of the discrete logarithm, not on randomness of the output. The coordinates look random only as a side effect, and the algebra is exact (HMWK 1).</td></tr>
+        <tr><td><strong>BIP-39 words (encoding)</strong></td><td><span class="verdict no">No, on purpose</span></td><td><span class="verdict yes">Yes, if the entropy is</span></td><td>Bits map to words one to one. A flip changes one word, which is what lets a person compare and copy a phrase.</td></tr>
+        <tr><td><strong>Checksums (BIP-39, EIP-55)</strong></td><td><span class="verdict yes">Helpful</span></td><td><span class="verdict no">Not needed</span></td><td>What counts is the probability that an accidental error slips through, about 2<sup>−c</sup> for c check bits. Section 3 measures it.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============================ WHY ============================ -->
+<section class="block" id="why">
+  <div class="wrap">
+    <p class="eyebrow">Discussion</p>
+    <h2>Why not one algorithm for everything?</h2>
+    <p class="prose">Because no single algorithm has all the properties the pipeline needs, and because the jobs are different. Each step solves one problem and hands plain bytes to the next one.</p>
+    <div class="table-scroll free"><table>
+      <thead><tr><th>Piece</th><th>Problem it solves</th><th>What it needs</th><th>Why the others cannot do it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>BIP-39, BIP-32, BIP-44</strong><br><span class="kind k-der">key management</span></td><td>Backing up and organising many keys, and agreeing on where they are.</td><td>Determinism (the same phrase gives the same keys), a human-sized backup, a fixed tree layout.</td><td>They are conventions built from SHA-256, HMAC and PBKDF2. A hash alone has no tree and no checksummed words, and the curve alone does not derive keys.</td></tr>
+        <tr><td><strong>secp256k1</strong><br><span class="kind k-pub">public / private</span></td><td>Proving you control an address, signing transactions, with nothing secret shared.</td><td>An asymmetric pair: public value computed from the private one, not the other way round, with signatures.</td><td>A hash has no key pair and no way to verify a signature without the secret. This is the only step that needs algebraic structure.</td></tr>
+        <tr><td><strong>Keccak-256</strong><br><span class="kind k-hash">hashing</span></td><td>Reducing a 64-byte public key to a short, uniform, fixed-size identifier.</td><td>One-way, fixed output, uniform and avalanche behaviour.</td><td>The curve output has algebraic structure (HMWK 1: only about half of the x values occur, and (n − k)G has the same x as kG). It is not designed to compress or to behave like random bytes.</td></tr>
+        <tr><td><strong>EIP-55</strong><br><span class="kind k-chk">checksum</span></td><td>Catching typos in an address people copy by hand.</td><td>Error detection with no change to the 20 address bytes.</td><td>A hash gives the digest but has no place in the address to put it. EIP-55 uses the letter case as free extra bits.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="prose" style="margin-top:14px">The steps are also separated on purpose. A weak or broken primitive hurts only its own job: the checksum can be wrong without exposing a key, and the hash of the public key is not needed to sign. Using one algorithm for everything would tie all these properties together, and a flaw in it would break everything at once.</p>
+  </div>
+</section>
+</main>
+<script>
+'use strict';
+/* =====================================================================
+   CORE: every primitive of the wallet pipeline, written out in plain JavaScript.
+     mnemonic -> BIP-39 -> seed -> BIP-32 / BIP-44 -> private key
+     -> secp256k1 -> public key -> Keccak-256 -> address -> EIP-55
+   Bytes are Uint8Array. Big numbers are BigInt.
+   ===================================================================== */
+
+/* ---------------------------- byte helpers ---------------------------- */
+const HEXCH = '0123456789abcdef';
+function toHex(u8) { let s = ''; for (const b of u8) s += HEXCH[b >> 4] + HEXCH[b & 15]; return s; }
+function fromHex(h) {
+  h = h.replace(/^0x/i, '');
+  if (h.length % 2) h = '0' + h;
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(2 * i, 2), 16);
+  return out;
+}
+function concat(...arrs) {
+  const out = new Uint8Array(arrs.reduce((n, a) => n + a.length, 0));
+  let o = 0; for (const a of arrs) { out.set(a, o); o += a.length; }
+  return out;
+}
+const utf8 = (s) => new TextEncoder().encode(s);
+const bigToBytes = (n, len) => fromHex(n.toString(16).padStart(len * 2, '0'));
+const bytesToBig = (u8) => (u8.length ? BigInt('0x' + toHex(u8)) : 0n);
+function randomBytes(n) {
+  const out = new Uint8Array(n);
+  (globalThis.crypto || window.crypto).getRandomValues(out);
+  return out;
+}
+/** Number of bits that differ between two equal-length byte arrays. */
+function bitDiff(a, b) {
+  let d = 0;
+  for (let i = 0; i < a.length; i++) { let v = a[i] ^ b[i]; while (v) { d += v & 1; v >>= 1; } }
+  return d;
+}
+
+/* ------------- round constants, generated instead of typed in ------------- */
+function firstPrimes(n) {
+  const out = [];
+  for (let c = 2; out.length < n; c++) if (out.every((p) => c % p)) out.push(c);
+  return out;
+}
+function iroot(n, k) {                         // floor of the k-th root of a BigInt
+  if (n < 2n) return n;
+  const K = BigInt(k);
+  let x = 1n << BigInt(Math.ceil(n.toString(2).length / k));
+  for (;;) { const y = ((K - 1n) * x + n / x ** (K - 1n)) / K; if (y >= x) return x; x = y; }
+}
+// fractional part of the cube root (or square root) of the prime, first `bits` bits
+const fracRoot = (p, k, bits) => iroot(BigInt(p) << BigInt(bits * k), k) & ((1n << BigInt(bits)) - 1n);
+
+const K256 = Uint32Array.from(firstPrimes(64).map((p) => Number(fracRoot(p, 3, 32))));
+const H256 = Uint32Array.from(firstPrimes(8).map((p) => Number(fracRoot(p, 2, 32))));
+const K512 = new Uint32Array(160);
+firstPrimes(80).forEach((p, i) => { const v = fracRoot(p, 3, 64); K512[2 * i] = Number(v >> 32n); K512[2 * i + 1] = Number(v & 0xffffffffn); });
+const H512 = new Uint32Array(16);
+firstPrimes(8).forEach((p, i) => { const v = fracRoot(p, 2, 64); H512[2 * i] = Number(v >> 32n); H512[2 * i + 1] = Number(v & 0xffffffffn); });
+
+/* ------------------------------- SHA-256 ------------------------------- */
+function sha256(bytes) {
+  const len = bytes.length;
+  const padded = new Uint8Array(((len + 9 + 63) >> 6) << 6);
+  padded.set(bytes);
+  padded[len] = 0x80;
+  const dv = new DataView(padded.buffer);
+  dv.setUint32(padded.length - 8, Math.floor((len * 8) / 4294967296));
+  dv.setUint32(padded.length - 4, (len * 8) >>> 0);
+  const h = Int32Array.from(H256), w = new Int32Array(64);
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + 4 * i);
+    for (let i = 16; i < 64; i++) {
+      const a = w[i - 15], b = w[i - 2];
+      const s0 = ((a >>> 7) | (a << 25)) ^ ((a >>> 18) | (a << 14)) ^ (a >>> 3);
+      const s1 = ((b >>> 17) | (b << 15)) ^ ((b >>> 19) | (b << 13)) ^ (b >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+    }
+    let a = h[0], b = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], hh = h[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const t1 = (hh + S1 + ((e & f) ^ (~e & g)) + K256[i] + w[i]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e; h[5] += f; h[6] += g; h[7] += hh;
+  }
+  const out = new Uint8Array(32), odv = new DataView(out.buffer);
+  for (let i = 0; i < 8; i++) odv.setUint32(4 * i, h[i] >>> 0);
+  return out;
+}
+
+/* ------------------------------- SHA-512 -------------------------------
+   64-bit words are kept as (high, low) pairs of 32-bit integers.           */
+const W512 = new Uint32Array(160);
+/** One compression: W[0..31] holds the block, H (16 words) is updated in place. */
+function sha512Block(H, W) {
+  for (let i = 16; i < 80; i++) {
+    const ah = W[2 * i - 30], al = W[2 * i - 29], bh = W[2 * i - 4], bl = W[2 * i - 3];
+    const s0h = ((ah >>> 1) | (al << 31)) ^ ((ah >>> 8) | (al << 24)) ^ (ah >>> 7);
+    const s0l = ((al >>> 1) | (ah << 31)) ^ ((al >>> 8) | (ah << 24)) ^ ((al >>> 7) | (ah << 25));
+    const s1h = ((bh >>> 19) | (bl << 13)) ^ ((bl >>> 29) | (bh << 3)) ^ (bh >>> 6);
+    const s1l = ((bl >>> 19) | (bh << 13)) ^ ((bh >>> 29) | (bl << 3)) ^ ((bl >>> 6) | (bh << 26));
+    const lo = W[2 * i - 31] + (s0l >>> 0) + W[2 * i - 13] + (s1l >>> 0);   // the xor results are signed, so >>> 0
+    W[2 * i + 1] = lo;
+    W[2 * i] = W[2 * i - 32] + (s0h >>> 0) + W[2 * i - 14] + (s1h >>> 0) + Math.floor(lo / 4294967296);
+  }
+  let aH = H[0], aL = H[1], bH = H[2], bL = H[3], cH = H[4], cL = H[5], dH = H[6], dL = H[7];
+  let eH = H[8], eL = H[9], fH = H[10], fL = H[11], gH = H[12], gL = H[13], hH = H[14], hL = H[15];
+  for (let i = 0; i < 80; i++) {
+    const S1h = ((eH >>> 14) | (eL << 18)) ^ ((eH >>> 18) | (eL << 14)) ^ ((eL >>> 9) | (eH << 23));
+    const S1l = ((eL >>> 14) | (eH << 18)) ^ ((eL >>> 18) | (eH << 14)) ^ ((eH >>> 9) | (eL << 23));
+    const chH = (eH & fH) ^ (~eH & gH), chL = (eL & fL) ^ (~eL & gL);
+    const t1l = (hL >>> 0) + (S1l >>> 0) + (chL >>> 0) + K512[2 * i + 1] + W[2 * i + 1];
+    const t1h = (((hH >>> 0) + (S1h >>> 0) + (chH >>> 0) + K512[2 * i] + W[2 * i] + Math.floor(t1l / 4294967296)) >>> 0);
+    const t1lo = t1l >>> 0;
+    const S0h = ((aH >>> 28) | (aL << 4)) ^ ((aL >>> 2) | (aH << 30)) ^ ((aL >>> 7) | (aH << 25));
+    const S0l = ((aL >>> 28) | (aH << 4)) ^ ((aH >>> 2) | (aL << 30)) ^ ((aH >>> 7) | (aL << 25));
+    const mjH = (aH & bH) ^ (aH & cH) ^ (bH & cH), mjL = (aL & bL) ^ (aL & cL) ^ (bL & cL);
+    const t2l = (S0l >>> 0) + (mjL >>> 0);
+    const t2h = (S0h >>> 0) + (mjH >>> 0) + Math.floor(t2l / 4294967296);
+    hH = gH; hL = gL; gH = fH; gL = fL; fH = eH; fL = eL;
+    const nel = (dL >>> 0) + t1lo;
+    eL = nel >>> 0; eH = ((dH >>> 0) + t1h + Math.floor(nel / 4294967296)) >>> 0;
+    dH = cH; dL = cL; cH = bH; cL = bL; bH = aH; bL = aL;
+    const nal = t1lo + (t2l >>> 0);
+    aL = nal >>> 0; aH = (t1h + (t2h >>> 0) + Math.floor(nal / 4294967296)) >>> 0;
+  }
+  const st = [aH, aL, bH, bL, cH, cL, dH, dL, eH, eL, fH, fL, gH, gL, hH, hL];
+  for (let j = 0; j < 8; j++) {
+    const lo = H[2 * j + 1] + (st[2 * j + 1] >>> 0);
+    H[2 * j + 1] = lo;
+    H[2 * j] = H[2 * j] + (st[2 * j] >>> 0) + Math.floor(lo / 4294967296);
+  }
+}
+function loadBlock(W, bytes, off) {
+  for (let i = 0; i < 32; i++) W[i] = ((bytes[off + 4 * i] << 24) | (bytes[off + 4 * i + 1] << 16) | (bytes[off + 4 * i + 2] << 8) | bytes[off + 4 * i + 3]) >>> 0;
+}
+function sha512State(H, bytes, priorBytes) {   // continues from state H; priorBytes = bytes already hashed
+  const len = bytes.length;
+  const padded = new Uint8Array(((len + 17 + 127) >> 7) << 7);
+  padded.set(bytes);
+  padded[len] = 0x80;
+  const bits = (len + priorBytes) * 8;
+  const dv = new DataView(padded.buffer);
+  dv.setUint32(padded.length - 8, Math.floor(bits / 4294967296));
+  dv.setUint32(padded.length - 4, bits >>> 0);
+  for (let off = 0; off < padded.length; off += 128) { loadBlock(W512, padded, off); sha512Block(H, W512); }
+  return H;
+}
+function stateToBytes(H) {
+  const out = new Uint8Array(64), dv = new DataView(out.buffer);
+  for (let i = 0; i < 16; i++) dv.setUint32(4 * i, H[i] >>> 0);
+  return out;
+}
+const sha512 = (bytes) => stateToBytes(sha512State(Uint32Array.from(H512), bytes, 0));
+
+/* --------------------------- HMAC and PBKDF2 --------------------------- */
+function hmacKeyBlocks(key) {
+  if (key.length > 128) key = sha512(key);
+  const ipad = new Uint8Array(128).fill(0x36), opad = new Uint8Array(128).fill(0x5c);
+  for (let i = 0; i < key.length; i++) { ipad[i] ^= key[i]; opad[i] ^= key[i]; }
+  return { ipad, opad };
+}
+function hmacSha512(key, msg) {
+  const { ipad, opad } = hmacKeyBlocks(key);
+  const inner = sha512(concat(ipad, msg));
+  return sha512(concat(opad, inner));
+}
+/** PBKDF2-HMAC-SHA512, 64 bytes of output (one block), using the saved ipad/opad states. */
+function pbkdf2Sha512(password, salt, iterations) {
+  const { ipad, opad } = hmacKeyBlocks(password);
+  const iState = Uint32Array.from(H512), oState = Uint32Array.from(H512);
+  loadBlock(W512, ipad, 0); sha512Block(iState, W512);
+  loadBlock(W512, opad, 0); sha512Block(oState, W512);
+  const first = hmacSha512(password, concat(salt, Uint8Array.of(0, 0, 0, 1)));
+  const U = new Uint32Array(16), T = new Uint32Array(16);
+  const dv = new DataView(first.buffer);
+  for (let i = 0; i < 16; i++) { U[i] = dv.getUint32(4 * i); T[i] = U[i]; }
+  const H = new Uint32Array(16), W = new Uint32Array(160);
+  W[16] = 0x80000000; W[31] = (128 + 64) * 8;          // padding of a 64-byte message after a 128-byte key block
+  for (let it = 1; it < iterations; it++) {
+    H.set(iState); W.set(U, 0); sha512Block(H, W);     // inner hash
+    W.set(H, 0); H.set(oState); sha512Block(H, W);     // outer hash
+    U.set(H);
+    for (let i = 0; i < 16; i++) T[i] ^= U[i];
+  }
+  return stateToBytes(T);
+}
+
+/* ------------------- Keccak-f[1600], Keccak-256 and SHA3-256 ------------------- */
+const KECCAK = (() => {
+  const rcBit = (t) => { t %= 255; if (t === 0) return 1; let R = 1; for (let i = 1; i <= t; i++) { R <<= 1; if (R & 0x100) R ^= 0x171; } return R & 1; };
+  const RCH = new Uint32Array(24), RCL = new Uint32Array(24);
+  for (let ir = 0; ir < 24; ir++) {
+    let c = 0n;
+    for (let j = 0; j <= 6; j++) if (rcBit(j + 7 * ir)) c |= 1n << BigInt((1 << j) - 1);
+    RCH[ir] = Number(c >> 32n); RCL[ir] = Number(c & 0xffffffffn);
+  }
+  const ROT = new Array(25).fill(0);
+  let x = 1, y = 0;
+  for (let t = 0; t < 24; t++) { ROT[x + 5 * y] = (((t + 1) * (t + 2)) / 2) % 64; [x, y] = [y, (2 * x + 3 * y) % 5]; }
+  return { RCH, RCL, ROT };
+})();
+const AH = new Uint32Array(25), AL = new Uint32Array(25), BH = new Uint32Array(25), BL = new Uint32Array(25);
+const CH = new Uint32Array(5), CL = new Uint32Array(5);
+function keccakF() {
+  for (let r = 0; r < 24; r++) {
+    for (let x = 0; x < 5; x++) {
+      CH[x] = AH[x] ^ AH[x + 5] ^ AH[x + 10] ^ AH[x + 15] ^ AH[x + 20];
+      CL[x] = AL[x] ^ AL[x + 5] ^ AL[x + 10] ^ AL[x + 15] ^ AL[x + 20];
+    }
+    for (let x = 0; x < 5; x++) {
+      const nh = CH[(x + 1) % 5], nl = CL[(x + 1) % 5];
+      const dh = CH[(x + 4) % 5] ^ ((nh << 1) | (nl >>> 31)), dl = CL[(x + 4) % 5] ^ ((nl << 1) | (nh >>> 31));
+      for (let y = 0; y < 25; y += 5) { AH[x + y] ^= dh; AL[x + y] ^= dl; }
+    }
+    for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) {
+      const i = x + 5 * y, n = KECCAK.ROT[i], h = AH[i], l = AL[i];
+      let rh, rl;
+      if (n === 0) { rh = h; rl = l; }
+      else if (n < 32) { rh = (h << n) | (l >>> (32 - n)); rl = (l << n) | (h >>> (32 - n)); }
+      else if (n === 32) { rh = l; rl = h; }
+      else { const m = n - 32; rh = (l << m) | (h >>> (32 - m)); rl = (h << m) | (l >>> (32 - m)); }
+      const j = y + 5 * ((2 * x + 3 * y) % 5);
+      BH[j] = rh; BL[j] = rl;
+    }
+    for (let y = 0; y < 25; y += 5) for (let x = 0; x < 5; x++) {
+      AH[x + y] = BH[x + y] ^ (~BH[((x + 1) % 5) + y] & BH[((x + 2) % 5) + y]);
+      AL[x + y] = BL[x + y] ^ (~BL[((x + 1) % 5) + y] & BL[((x + 2) % 5) + y]);
+    }
+    AH[0] ^= KECCAK.RCH[r]; AL[0] ^= KECCAK.RCL[r];
+  }
+}
+/** Sponge with rate 136 bytes (capacity 512 bits). `suffix` is the padding byte: 0x01 Keccak, 0x06 SHA-3. */
+function keccak256With(bytes, suffix) {
+  const rate = 136;
+  AH.fill(0); AL.fill(0);
+  const padded = new Uint8Array(((bytes.length + 1 + rate - 1) / rate | 0) * rate);
+  padded.set(bytes);
+  padded[bytes.length] ^= suffix;
+  padded[padded.length - 1] ^= 0x80;
+  for (let off = 0; off < padded.length; off += rate) {
+    for (let i = 0; i < rate / 8; i++) {
+      const o = off + 8 * i;
+      AL[i] ^= padded[o] | (padded[o + 1] << 8) | (padded[o + 2] << 16) | (padded[o + 3] << 24);
+      AH[i] ^= padded[o + 4] | (padded[o + 5] << 8) | (padded[o + 6] << 16) | (padded[o + 7] << 24);
+    }
+    keccakF();
+  }
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 4; i++) for (let b = 0; b < 4; b++) {
+    out[8 * i + b] = (AL[i] >>> (8 * b)) & 255;
+    out[8 * i + 4 + b] = (AH[i] >>> (8 * b)) & 255;
+  }
+  return out;
+}
+const keccak256 = (bytes) => keccak256With(bytes, 0x01);
+const sha3_256 = (bytes) => keccak256With(bytes, 0x06);
+
+/* ------------------------------ secp256k1 ------------------------------ */
+const SECP = {
+  p: (1n << 256n) - (1n << 32n) - 977n,
+  n: 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n,
+  Gx: 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n,
+  Gy: 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n,
+};
+const P_ = SECP.p;
+const fmod = (a) => { const r = a % P_; return r >= 0n ? r : r + P_; };
+function modInv(a, m) {
+  let r0 = ((a % m) + m) % m, r1 = m, s0 = 1n, s1 = 0n;
+  while (r1 !== 0n) { const q = r0 / r1; [r0, r1] = [r1, r0 - q * r1]; [s0, s1] = [s1, s0 - q * s1]; }
+  if (r0 !== 1n) throw new Error('not invertible');
+  return ((s0 % m) + m) % m;
+}
+const onCurve = (P) => fmod(P.y * P.y - P.x * P.x * P.x - 7n) === 0n;
+// Jacobian coordinates (X, Y, Z) stand for the affine point (X/Z^2, Y/Z^3); Z = 0 is the point at infinity O.
+function jDouble(P) {
+  const [X, Y, Z] = P;
+  if (Z === 0n || Y === 0n) return [1n, 1n, 0n];
+  const A = X * X % P_, B = Y * Y % P_, C = B * B % P_;
+  const D = fmod(2n * ((X + B) * (X + B) - A - C)), E = 3n * A, F = E * E % P_;
+  const X3 = fmod(F - 2n * D);
+  return [X3, fmod(E * (D - X3) - 8n * C), 2n * Y * Z % P_];
+}
+function jAddAffine(P, q) {                    // Jacobian point + affine point q = {x, y}
+  const [X1, Y1, Z1] = P;
+  if (Z1 === 0n) return [q.x, q.y, 1n];
+  const Z1Z1 = Z1 * Z1 % P_, U2 = q.x * Z1Z1 % P_, S2 = q.y * Z1 % P_ * Z1Z1 % P_;
+  const H = fmod(U2 - X1), r = fmod(2n * (S2 - Y1));
+  if (H === 0n) return r === 0n ? jDouble(P) : [1n, 1n, 0n];
+  const HH = H * H % P_, I = 4n * HH % P_, J = H * I % P_, V = X1 * I % P_;
+  const X3 = fmod(r * r - J - 2n * V);
+  return [X3, fmod(r * (V - X3) - 2n * Y1 * J), fmod((Z1 + H) * (Z1 + H) - Z1Z1 - HH)];
+}
+function toAffine(P) {
+  if (P[2] === 0n) return null;
+  const zi = modInv(P[2], P_), zi2 = zi * zi % P_;
+  return { x: P[0] * zi2 % P_, y: P[1] * zi2 % P_ * zi % P_ };
+}
+/** k * Q by double-and-add (the same method as HMWK 1), Q = {x, y}; returns {x, y} or null for O. */
+function pointMul(k, Q) {
+  let R = [1n, 1n, 0n];
+  for (const bit of k.toString(2)) { R = jDouble(R); if (bit === '1') R = jAddAffine(R, Q); }
+  return toAffine(R);
+}
+const GPOINT = { x: SECP.Gx, y: SECP.Gy };
+const publicPoint = (k) => pointMul(k, GPOINT);
+const pubUncompressed64 = (P) => concat(bigToBytes(P.x, 32), bigToBytes(P.y, 32));          // x || y, no 04 prefix
+const pubCompressed33 = (P) => concat(Uint8Array.of(P.y % 2n === 0n ? 2 : 3), bigToBytes(P.x, 32));
+
+/* --------------------------------- BIP-39 --------------------------------- */
+// WORDLIST (the 2048 English words) is defined in wordlist.js
+let WORDINDEX = null;
+function wordIndex() { if (!WORDINDEX) WORDINDEX = new Map(WORDLIST.map((w, i) => [w, i])); return WORDINDEX; }
+const bitsOf = (u8) => Array.from(u8, (b) => b.toString(2).padStart(8, '0')).join('');
+
+/** entropy (16, 20, 24, 28 or 32 bytes) -> entropy bits + checksum bits -> 11-bit groups -> words. */
+function entropyToMnemonic(ent) {
+  const ENT = ent.length * 8, CS = ENT / 32;
+  const hash = sha256(ent);
+  const checksumBits = bitsOf(hash).slice(0, CS);
+  const all = bitsOf(ent) + checksumBits;
+  const indices = [];
+  for (let i = 0; i < all.length; i += 11) indices.push(parseInt(all.slice(i, i + 11), 2));
+  return { entropyBits: all.slice(0, ENT), checksumBits, indices, words: indices.map((i) => WORDLIST[i]), hash };
+}
+const normalizeMnemonic = (m) => m.normalize('NFKD').trim().toLowerCase().split(/\s+/).filter(Boolean);
+/** Checks a phrase. Returns {ok, error} or {ok:true, entropy, checksumBits, ...}. */
+function checkMnemonic(phrase) {
+  const words = normalizeMnemonic(phrase);
+  if (![12, 15, 18, 21, 24].includes(words.length)) return { ok: false, error: `${words.length} words: a mnemonic has 12, 15, 18, 21 or 24 words` };
+  const idx = wordIndex(), indices = [];
+  for (const w of words) {
+    if (!idx.has(w)) return { ok: false, error: `"${w}" is not in the BIP-39 English list` };
+    indices.push(idx.get(w));
+  }
+  const all = indices.map((i) => i.toString(2).padStart(11, '0')).join('');
+  const CS = words.length / 3, ENT = all.length - CS;
+  const entropy = new Uint8Array(ENT / 8);
+  for (let i = 0; i < entropy.length; i++) entropy[i] = parseInt(all.slice(8 * i, 8 * i + 8), 2);
+  const want = bitsOf(sha256(entropy)).slice(0, CS), have = all.slice(ENT);
+  if (want !== have) return { ok: false, error: `checksum does not match (the phrase carries ${have}, the entropy hashes to ${want})`, words, indices };
+  return { ok: true, words, indices, entropy, entropyBits: all.slice(0, ENT), checksumBits: have };
+}
+/** seed = PBKDF2-HMAC-SHA512(password = mnemonic, salt = "mnemonic" + passphrase, 2048 iterations, 64 bytes). */
+function mnemonicToSeed(phrase, passphrase = '') {
+  const m = normalizeMnemonic(phrase).join(' ');
+  return pbkdf2Sha512(utf8(m), utf8('mnemonic' + passphrase.normalize('NFKD')), 2048);
+}
+
+/* ------------------------------ BIP-32 and BIP-44 ------------------------------ */
+const HARD = 0x80000000;
+function masterFromSeed(seed) {
+  const I = hmacSha512(utf8('Bitcoin seed'), seed);
+  const k = bytesToBig(I.slice(0, 32));
+  if (k === 0n || k >= SECP.n) throw new Error('invalid master key');
+  return { k, c: I.slice(32), I };
+}
+/** Private child key derivation CKDpriv. */
+function ckdPriv(k, c, index) {
+  const hardened = index >= HARD;
+  const data = hardened
+    ? concat(Uint8Array.of(0), bigToBytes(k, 32), u32(index))
+    : concat(pubCompressed33(publicPoint(k)), u32(index));
+  const I = hmacSha512(c, data);
+  const IL = bytesToBig(I.slice(0, 32));
+  if (IL >= SECP.n) throw new Error('invalid child (IL >= n)');
+  const child = (IL + k) % SECP.n;
+  if (child === 0n) throw new Error('invalid child (key = 0)');
+  return { k: child, c: I.slice(32), I, IL, data, hardened };
+}
+const u32 = (n) => Uint8Array.of((n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255);
+function parsePath(path) {
+  const parts = path.trim().split('/');
+  if (parts[0] !== 'm') throw new Error('a path starts with m');
+  return parts.slice(1).map((p) => {
+    const m = /^(\d+)(['hH]?)$/.exec(p);
+    if (!m) throw new Error(`bad path element "${p}"`);
+    const n = Number(m[1]);
+    if (n >= HARD) throw new Error(`index ${n} is too large`);
+    return m[2] ? n + HARD : n;
+  });
+}
+/** Walks the path and returns every level, starting with the master key. */
+function derivePath(seed, path) {
+  const m = masterFromSeed(seed);
+  const levels = [{ label: 'm', index: null, hardened: false, k: m.k, c: m.c, I: m.I }];
+  let k = m.k, c = m.c, label = 'm';
+  for (const idx of parsePath(path)) {
+    const ch = ckdPriv(k, c, idx);
+    label += '/' + (idx >= HARD ? `${idx - HARD}'` : idx);
+    levels.push({ label, index: idx, hardened: ch.hardened, k: ch.k, c: ch.c, I: ch.I, IL: ch.IL, data: ch.data, parentK: k });
+    k = ch.k; c = ch.c;
+  }
+  return levels;
+}
+
+/* ----------------------- address and EIP-55 checksum ----------------------- */
+function addressFromPublic(P) {                // last 20 bytes of Keccak-256(x || y)
+  const hash = keccak256(pubUncompressed64(P));
+  return { hash, bytes: hash.slice(12), hex: toHex(hash.slice(12)) };
+}
+function eip55(lowerHex) {                     // lowerHex: 40 lowercase hex chars, no 0x
+  const h = keccak256(utf8(lowerHex));
+  let out = '';
+  for (let i = 0; i < 40; i++) {
+    const ch = lowerHex[i], nib = h[i >> 1] >> (i % 2 === 0 ? 4 : 0) & 15;
+    out += ch >= 'a' && nib >= 8 ? ch.toUpperCase() : ch;
+  }
+  return out;
+}
+/** 'valid', 'invalid' or 'none' (all lower or all upper case: carries no checksum). */
+function checkEip55(addr) {
+  const a = addr.replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]{40}$/.test(a)) return 'invalid';
+  if (a === a.toLowerCase() || a === a.toUpperCase()) return 'none';
+  return eip55(a.toLowerCase()) === a ? 'valid' : 'invalid';
+}
+
+/** The whole pipeline in one call. */
+function walletFromMnemonic(phrase, passphrase, path) {
+  const seed = mnemonicToSeed(phrase, passphrase);
+  const levels = derivePath(seed, path);
+  const k = levels[levels.length - 1].k;
+  const P = publicPoint(k);
+  const a = addressFromPublic(P);
+  return { seed, levels, k, P, hash: a.hash, lower: a.hex, address: eip55(a.hex) };
+}
+
+/* ------------------------------- statistics ------------------------------- */
+function erfc(x) {
+  const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+  const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 +
+    t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  return x >= 0 ? r : 2 - r;
+}
+/** Chi-square against a flat distribution; p-value by the Wilson-Hilferty approximation. */
+function chiSquareFlat(counts) {
+  const total = counts.reduce((s, c) => s + c, 0), E = total / counts.length;
+  let chi = 0;
+  for (const c of counts) chi += ((c - E) * (c - E)) / E;
+  const df = counts.length - 1;
+  const z = (Math.cbrt(chi / df) - (1 - 2 / (9 * df))) / Math.sqrt(2 / (9 * df));
+  return { chi, df, E, pValue: 0.5 * erfc(z / Math.SQRT2), reliable: E >= 5 };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    toHex, fromHex, concat, utf8, bigToBytes, bytesToBig, randomBytes, bitDiff,
+    sha256, sha512, hmacSha512, pbkdf2Sha512, keccak256, sha3_256, SECP, modInv, onCurve, pointMul, publicPoint,
+    pubUncompressed64, pubCompressed33, entropyToMnemonic, checkMnemonic, mnemonicToSeed, normalizeMnemonic,
+    masterFromSeed, ckdPriv, parsePath, derivePath, addressFromPublic, eip55, checkEip55, walletFromMnemonic,
+    erfc, chiSquareFlat, HARD, setWordlist: (w) => { globalThis.WORDLIST = w; WORDINDEX = null; },
+  };
+}
+
+const WORDLIST = "abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact end endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip era erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eye eyebrow fabric face faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion fat fatal father fatigue fault favorite feature february federal fee feed feel female fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant inflict inform inhale inherit initial inject injury inmate inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid mail main major make mammal man manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix mixed mixture mobile model modify mom moment monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net network neutral never news next nice night noble noise nominee noodle normal north nose notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain obvious occur ocean october odor off offer office often oil okay old olive olympic omit once one onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw razor ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry sort soul sound soup source south space spare spatial spawn speak special speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tag tail talent talk tank tape target task taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome west wet whale what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo".split(" ");
+
+/* =====================================================================
+   UI: everything below talks to the DOM. The primitives live in the core above.
+   ===================================================================== */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hex32 = (n) => n.toString(16).padStart(64, '0');
+  const pct = (x, d = 1) => (x * 100).toFixed(d) + '%';
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  let pool = new Uint32Array(0), pi = 0;     // random numbers are drawn from a buffer of 4096
+  const rnd = (n) => {
+    if (pi >= pool.length) { pool = new Uint32Array(4096); (globalThis.crypto || window.crypto).getRandomValues(pool); pi = 0; }
+    return pool[pi++] % n;
+  };
+  const flipBit = (u8, i) => { const c = Uint8Array.from(u8); c[i >> 3] ^= 0x80 >> (i & 7); return c; };
+  const TEST = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const DEFAULT_PATH = "m/44'/60'/0'/0/0";
+  const KIND = {
+    gen: ['k-gen', 'Generation'], der: ['k-der', 'Derivation'], pub: ['k-pub', 'Public-key'],
+    hash: ['k-hash', 'Hashing'], chk: ['k-chk', 'Checksum'], enc: ['k-enc', 'Encoding'],
+  };
+  const kinds = (...ks) => ks.map((k) => `<span class="kind ${KIND[k][0]}">${KIND[k][1]}</span>`).join('');
+
+  const mnem = $('mnem'), pass = $('pass'), path = $('path');
+  let W = null;                // the current wallet, or null while the input is not valid
+  let firstChk = true;
+
+  /* ========================= 1. THE PIPELINE ========================= */
+  function pathLayout(p) {     // returns the BIP-44 Ethereum fields if the path has that shape
+    let idx;
+    try { idx = parsePath(p); } catch (e) { return null; }
+    if (idx.length !== 5 || idx[0] !== HARD + 44 || idx[1] !== HARD + 60 || idx[2] < HARD || idx[3] > 1 || idx[4] >= HARD) return null;
+    return { account: idx[2] - HARD, change: idx[3], index: idx[4] };
+  }
+
+  function update() {
+    $('pathErr').textContent = '';
+    const chk = checkMnemonic(mnem.value);
+    const st = $('mnemStatus');
+    if (!chk.ok) {
+      st.className = 'status bad';
+      st.textContent = 'Not a valid mnemonic: ' + chk.error + '.';
+      return renderEmpty('Enter a valid mnemonic to see the pipeline.');
+    }
+    try { parsePath(path.value); } catch (e) {
+      $('pathErr').textContent = 'Path: ' + e.message + '.';
+      st.className = 'status ok';
+      st.textContent = `Valid mnemonic: ${chk.words.length} words.`;
+      return renderEmpty('Fix the derivation path to see the pipeline.');
+    }
+    st.className = 'status ok';
+    st.textContent = `Valid: ${chk.words.length} words = ${chk.entropy.length * 8} bits of entropy + ${chk.checksumBits.length} checksum bits.`;
+    W = Object.assign(walletFromMnemonic(mnem.value, pass.value, path.value), { chk, pathStr: path.value.trim() });
+    renderAll();
+  }
+
+  function renderEmpty(msg) {
+    W = null;
+    $('hMnem').textContent = '—'; $('hAddr').textContent = '—';
+    $('hPath').textContent = path.value.trim() || '—';
+    $('stageBody').innerHTML = `<tr><td colspan="4" class="note">${esc(msg)}</td></tr>`;
+    for (const id of ['bip39Math', 'wordGrid', 'seedHex', 'masterOut', 'pathChips', 'levelBody', 'nextBody', 'kHex', 'qHex', 'qEnc', 'secpFacts', 'kecIn', 'kecOut', 'eipHash', 'eipCells', 'eipAddr']) $(id).innerHTML = '';
+    $('pathEcho').textContent = ''; $('pathNote').textContent = '';
+  }
+
+  function renderAll() {
+    renderStages(); renderBip39(); renderBip32(); renderSecp(); renderKeccak(); renderEip55();
+  }
+
+  function renderStages() {
+    const c = W.chk, x = bigToBytes(W.P.x, 32), y = bigToBytes(W.P.y, 32);
+    const rows = [
+      ['Entropy', 'Operating-system random generator (a restored wallet recovers it from the words)', kinds('gen'), `<span class="hexv">${toHex(c.entropy)}</span><span class="note">${c.entropy.length * 8} bits</span>`],
+      ['Mnemonic', 'BIP-39: 11 bits per word, plus a SHA-256 checksum', kinds('enc', 'chk'), `<span class="hexv">${esc(c.words.join(' '))}</span><span class="note">${c.words.length} words</span>`],
+      ['Seed', 'BIP-39: PBKDF2-HMAC-SHA512, 2048 iterations', kinds('der'), `<span class="hexv">${toHex(W.seed)}</span><span class="note">512 bits</span>`],
+      ['Private key', `BIP-32 / BIP-44: HMAC-SHA512 at each level of ${esc(W.pathStr)}`, kinds('der'), `<span class="hexv">${hex32(W.k)}</span><span class="note">256 bits, below n</span>`],
+      ['Public key', 'secp256k1: Q = k·G', kinds('pub'), `<span class="hexv"><span class="grn">${toHex(x)}</span><span class="blu">${toHex(y)}</span></span><span class="note">x ‖ y, 64 bytes</span>`],
+      ['Address', 'Keccak-256 of x ‖ y, last 20 bytes', kinds('hash'), `<span class="hexv">0x${W.lower}</span><span class="note">160 bits, all lower case</span>`],
+      ['Checksummed address', 'EIP-55: capital letters from a second Keccak-256', kinds('chk', 'enc'), `<span class="hexv"><span class="hot">0x${W.address}</span></span>`],
+    ];
+    $('stageBody').innerHTML = rows.map((r, i) =>
+      `<tr${i === rows.length - 1 ? ' class="res"' : ''}><td class="s">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="v">${r[3]}</td></tr>`).join('');
+    const w = c.words;
+    $('hMnem').textContent = `${w[0]} … ${w[w.length - 1]} (${w.length})`;
+    $('hPath').textContent = W.pathStr + (pass.value ? ' + passphrase' : '');
+    $('hAddr').textContent = '0x' + W.address;
+  }
+
+  /* ============================ 2. BIP-39 ============================ */
+  function renderBip39() {
+    const c = W.chk, ENT = c.entropy.length * 8, CS = c.checksumBits.length;
+    const h = sha256(c.entropy);
+    $('bip39Math').textContent =
+      `entropy   (${ENT} bits)  ${toHex(c.entropy)}\n` +
+      `SHA-256(entropy)       ${toHex(h).slice(0, 24)}…\n` +
+      `checksum  (${CS} bits)    first ${CS} bits of that hash = ${c.checksumBits}\n` +
+      `${ENT} + ${CS} = ${ENT + CS} bits = ${c.words.length} groups of 11 bits; each group is an index 0..2047 into the word list`;
+    const all = c.entropyBits + c.checksumBits;
+    $('wordGrid').innerHTML = c.words.map((word, i) => {
+      let b = all.slice(11 * i, 11 * i + 11);
+      if (i === c.words.length - 1) b = b.slice(0, 11 - CS) + `<span class="cs">${b.slice(11 - CS)}</span>`;
+      return `<div class="w"><span class="n">#${i + 1}</span><span class="bits">${b}</span><span class="wd">${esc(word)}<span class="ix">${c.indices[i]}</span></span></div>`;
+    }).join('');
+    $('seedHex').textContent = toHex(W.seed);
+  }
+
+  /* ========================= 3. BIP-32 / BIP-44 ========================= */
+  function renderBip32() {
+    const L = W.levels, m = L[0];
+    $('masterOut').innerHTML = `<span class="dim">master private key </span><span class="grn">${hex32(m.k)}</span><br><span class="dim">chain code         </span>${toHex(m.c)}`;
+    $('pathEcho').textContent = '· ' + W.pathStr;
+    const idx = parsePath(W.pathStr), lay = pathLayout(W.pathStr);
+    if (lay) {
+      const parts = [
+        ['m', 'master key'], ["44'", 'purpose: BIP-44'], ["60'", 'coin type: Ethereum'], [`${lay.account}'`, 'account'],
+        [String(lay.change), lay.change ? 'change: internal' : 'change: external'], [String(lay.index), 'address index'],
+      ];
+      $('pathChips').innerHTML = parts.map((p, i) => `<div class="pchip${i === 5 ? ' on' : ''}"><b>${p[0]}</b><span>${p[1]}</span></div>`).join('');
+      $('pathNote').textContent = "m / purpose' / coin_type' / account' / change / address_index. The apostrophe marks a hardened step. Ethereum wallets always use change = 0.";
+    } else {
+      $('pathChips').innerHTML = [['m', 'master key']].concat(idx.map((i) => (i >= HARD ? [`${i - HARD}'`, 'hardened'] : [String(i), 'normal']))).map((p) => `<div class="pchip"><b>${p[0]}</b><span>${p[1]}</span></div>`).join('');
+      $('pathNote').textContent = "This path does not have the BIP-44 Ethereum shape m/44'/60'/account'/0/index. It is derived in exactly the same way, but another wallet would not look for it by default.";
+    }
+    $('levelBody').innerHTML = L.map((l, i) =>
+      `<tr><td class="m">${esc(l.label)}</td><td>${i === 0 ? 'master (HMAC key "Bitcoin seed")' : (l.hardened ? 'hardened' : 'normal')}</td><td><span class="hexv grn">${hex32(l.k)}</span></td><td><span class="hexv">${toHex(l.c)}</span></td></tr>`).join('');
+    if (lay) {
+      const rows = [];
+      for (let i = 0; i < 5; i++) {
+        const p = `m/44'/60'/${lay.account}'/${lay.change}/${i}`;
+        const lv = derivePath(W.seed, p), a = addressFromPublic(publicPoint(lv[lv.length - 1].k));
+        rows.push(`<tr${i === lay.index ? ' class="res"' : ''}><td class="m">${p}</td><td class="m">0x${eip55(a.hex)}</td></tr>`);
+      }
+      $('nextBody').innerHTML = rows.join('');
+    } else {
+      $('nextBody').innerHTML = `<tr><td colspan="2" class="note">Use a path of the form m/44'/60'/account'/0/index to list the addresses of an account.</td></tr>`;
+    }
+  }
+
+  /* ========================== 4. secp256k1 ========================== */
+  function renderSecp() {
+    const P = W.P, bits = W.k.toString(2), ones = bits.split('1').length - 1;
+    $('kHex').textContent = hex32(W.k);
+    $('qHex').innerHTML = `<span class="grn">x = ${hex32(P.x)}</span><br><span class="blu">y = ${hex32(P.y)}</span>`;
+    const comp = pubCompressed33(P);
+    $('qEnc').innerHTML = `<span class="dim">uncompressed, 65 bytes   </span><span class="hot">04</span>${hex32(P.x)}${hex32(P.y)}<br><span class="dim">compressed, 33 bytes     </span><span class="hot">${toHex(comp.slice(0, 1))}</span>${toHex(comp.slice(1))}<br><span class="dim">prefix 02 = y even, 03 = y odd</span>`;
+    $('secpFacts').textContent =
+      `k has ${bits.length} bits (${ones} ones): ${bits.length - 1} doublings + ${ones - 1} additions. On the curve: y² − x³ − 7 ≡ 0 (mod p) is ${onCurve(P)}.`;
+  }
+
+  /* =========================== 5. Keccak-256 =========================== */
+  function renderKeccak() {
+    const x = toHex(bigToBytes(W.P.x, 32)), y = toHex(bigToBytes(W.P.y, 32)), h = toHex(W.hash);
+    $('kecIn').innerHTML = `<span class="grn">${x}</span><span class="blu">${y}</span>`;
+    $('kecOut').innerHTML = `<span class="dim">${h.slice(0, 24)}</span><span class="grn">${h.slice(24)}</span>`;
+  }
+  function renderLab() {
+    const m = utf8($('labIn').value);
+    $('labKec').textContent = toHex(keccak256(m));
+    $('labSha3').textContent = toHex(sha3_256(m));
+    $('labSha256').textContent = toHex(sha256(m));
+    $('labSha512').textContent = toHex(sha512(m));
+  }
+
+  /* ============================== 6. EIP-55 ============================== */
+  function renderEip55() {
+    const h = toHex(keccak256(utf8(W.lower)));
+    $('eipHash').innerHTML = `${h.slice(0, 40)}<span class="dim">${h.slice(40)}</span>`;
+    let cells = '';
+    for (let i = 0; i < 40; i++) {
+      const ch = W.lower[i], nib = h[i], up = ch >= 'a' && parseInt(nib, 16) >= 8, res = up ? ch.toUpperCase() : ch;
+      cells += `<div class="cell${up ? ' up' : ''}"><i>${ch}</i><i>${nib}</i><b>${res}</b></div>`;
+    }
+    $('eipCells').innerHTML = cells;
+    $('eipAddr').innerHTML = `0x${W.address.replace(/[A-F]/g, '<span style="color:var(--hot)">$&</span>')}`;
+    if (firstChk) { firstChk = false; $('chkIn').value = '0x' + W.address; }
+    renderChk();
+  }
+  function renderChk() {
+    const v = $('chkIn').value.trim(), o = $('chkOut');
+    if (!v) { o.className = 'status'; o.textContent = 'Paste an address, or change one capital letter of the one above.'; return; }
+    const r = checkEip55(v);
+    if (r === 'valid') { o.className = 'status ok'; o.textContent = 'Valid: the capitalisation matches the EIP-55 checksum.'; return; }
+    if (r === 'none') { o.className = 'status'; o.textContent = 'All lower case or all upper case: a readable address, but it carries no checksum, so a typo would not be caught.'; return; }
+    const a = v.replace(/^0x/i, '');
+    o.className = 'status bad';
+    o.textContent = /^[0-9a-fA-F]{40}$/.test(a)
+      ? `Checksum mismatch: a character was changed or mis-capitalised. The correct form is 0x${eip55(a.toLowerCase())}.`
+      : 'Not an address: it needs 40 hexadecimal digits after 0x.';
+  }
+
+  /* ========================== 7. STATISTICS ========================== */
+  function barChart(counts, o) {
+    const w = 330, h = 140, L = 34, R = 6, T = 10, B = 22;
+    const top = Math.ceil(Math.max(...counts, o.expected) * 1.12);
+    const bw = (w - L - R) / counts.length, ph = h - T - B, yOf = (v) => T + ph * (1 - v / top);
+    let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(o.aria)}">`;
+    s += `<line class="ax-line" x1="${L}" y1="${yOf(0)}" x2="${w - R}" y2="${yOf(0)}"/><text class="ax" x="${L - 5}" y="${yOf(0) + 3}" text-anchor="end">0</text><text class="ax" x="${L - 5}" y="${yOf(top) + 3}" text-anchor="end">${top}</text>`;
+    counts.forEach((c, i) => {
+      const bh = ph * (c / top);
+      s += `<rect class="bar" x="${(L + i * bw + 1.5).toFixed(1)}" y="${(yOf(0) - bh).toFixed(1)}" width="${(bw - 3).toFixed(1)}" height="${bh.toFixed(1)}"/>`;
+      s += `<text class="ax" x="${(L + (i + 0.5) * bw).toFixed(1)}" y="${h - 8}" text-anchor="middle">${i.toString(16)}</text>`;
+    });
+    s += `<line class="exp-line" x1="${L}" x2="${w - R}" y1="${yOf(o.expected).toFixed(1)}" y2="${yOf(o.expected).toFixed(1)}"/>`;
+    return s + '</svg>';
+  }
+  function dotPlot(vals, sigma, aria) {
+    const w = 330, h = 140, L = 38, R = 6, T = 8, B = 20, lim = 4.5 * sigma;
+    const px = (j) => L + ((w - L - R) * (j + 0.5)) / vals.length, py = (v) => T + (h - T - B) * (1 - (v - (0.5 - lim)) / (2 * lim));
+    let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(aria)}">`;
+    s += `<line class="mid-line" x1="${L}" x2="${w - R}" y1="${py(0.5)}" y2="${py(0.5)}"/>`;
+    for (const sg of [-3, 3]) s += `<line class="band-line" x1="${L}" x2="${w - R}" y1="${py(0.5 + sg * sigma).toFixed(1)}" y2="${py(0.5 + sg * sigma).toFixed(1)}"/>`;
+    vals.forEach((v, j) => { s += `<circle class="dot${Math.abs(v - 0.5) > 3 * sigma ? ' out' : ''}" cx="${px(j).toFixed(1)}" cy="${py(Math.max(0.5 - lim, Math.min(0.5 + lim, v))).toFixed(1)}" r="1.7"/>`; });
+    s += `<text class="ax" x="${L - 4}" y="${py(0.5) + 3}" text-anchor="end">0.50</text><text class="ax" x="${L - 4}" y="${py(0.5 + 3 * sigma) + 3}" text-anchor="end">+3σ</text><text class="ax" x="${L - 4}" y="${py(0.5 - 3 * sigma) + 3}" text-anchor="end">−3σ</text>`;
+    s += `<text class="ax" x="${L}" y="${h - 6}">bit 0</text><text class="ax" x="${w - R}" y="${h - 6}" text-anchor="end">bit ${vals.length - 1}</text>`;
+    return s + '</svg>';
+  }
+  const meter = (f) => `<div class="meter" title="${pct(f)}"><span style="width:${Math.min(100, f * 100).toFixed(1)}%"></span><i></i></div>`;
+  const summarize = (a) => { const mean = a.reduce((s, v) => s + v, 0) / a.length; return { mean, min: Math.min(...a), max: Math.max(...a) }; };
+  const busy = { av: false, ds: false, ck: false };
+
+  /* ---- 1 · avalanche ---- */
+  async function runAvalanche() {
+    if (busy.av) return; busy.av = true;
+    const n = Number($('avN').value), r = { words: [], seed: [], key: [], pub: [], addr: [], eip: [] };
+    const prog = $('avProg'), btn = $('avRun'); btn.disabled = true;
+    const flags = (a) => { const hx = toHex(a), h = keccak256(utf8(hx)); return Array.from({ length: 40 }, (_, i) => ((h[i >> 1] >> (i % 2 ? 0 : 4)) & 15) >= 8); };
+    for (let t = 0; t < n; t++) {
+      const ent = randomBytes(16), m1 = entropyToMnemonic(ent), m2 = entropyToMnemonic(flipBit(ent, rnd(128)));
+      r.words.push(m1.words.filter((w, i) => w !== m2.words[i]).length);
+      const s1 = mnemonicToSeed(m1.words.join(' ')), s2 = mnemonicToSeed(m2.words.join(' '));
+      r.seed.push(bitDiff(s1, s2) / 512);
+      const k1 = derivePath(s1, DEFAULT_PATH).pop().k, k2 = derivePath(flipBit(s1, rnd(512)), DEFAULT_PATH).pop().k;
+      r.key.push(bitDiff(bigToBytes(k1, 32), bigToBytes(k2, 32)) / 256);
+      let k3 = bytesToBig(flipBit(bigToBytes(k1, 32), rnd(256))); if (k3 >= SECP.n || k3 === 0n) k3 = k1 ^ 1n;
+      const P1 = publicPoint(k1), P2 = publicPoint(k3);
+      r.pub.push(bitDiff(bigToBytes(P1.x, 32), bigToBytes(P2.x, 32)) / 256);
+      const pub = pubUncompressed64(P1);
+      r.addr.push(bitDiff(keccak256(pub).slice(12), keccak256(flipBit(pub, rnd(512))).slice(12)) / 160);
+      const a1 = keccak256(pub).slice(12), f1 = flags(a1), f2 = flags(flipBit(a1, rnd(160)));
+      r.eip.push(f1.filter((v, i) => v !== f2[i]).length / 40);
+      if (t % 3 === 2) { prog.textContent = `${t + 1} / ${n}`; await tick(); }
+    }
+    const row = (a, b, c, d, f, text) => {
+      const s = summarize(f);
+      return `<tr><td><strong>${a}</strong><br><span class="note">${b}</span></td><td>${c}</td><td>${d}</td><td class="m">${pct(s.mean)}<br><span class="note">${pct(s.min, 0)} to ${pct(s.max, 0)}</span></td><td>${meter(s.mean)}</td><td>${text}</td></tr>`;
+    };
+    const ws = summarize(r.words);
+    $('avBody').innerHTML =
+      `<tr><td><strong>Entropy → words</strong><br><span class="note">BIP-39 encoding</span></td><td>one of the 128 entropy bits</td><td>the 12 words</td><td class="m">${ws.mean.toFixed(1)} of 12 words<br><span class="note">${ws.min} to ${ws.max}</span></td><td></td><td>Local, by design. The flipped bit lands in one word, and the changed checksum bits change the last word. Neighbours stay neighbours.</td></tr>` +
+      row('Mnemonic → seed', 'PBKDF2-HMAC-SHA512', 'one entropy bit (one or two words differ)', '512-bit seed', r.seed, 'Full avalanche. Half of the seed changes for the smallest possible change of the phrase.') +
+      row('Seed → private key', 'HMAC-SHA512 along the path', 'one of the 512 seed bits', '256-bit private key', r.key, 'Full avalanche, so two similar seeds give unrelated keys.') +
+      row('Private key → public key', 'secp256k1', 'one of the 256 key bits', 'the 256 bits of x', r.pub, 'Looks like a full avalanche, but nothing in the curve was designed for it. The map is algebraic and exact.') +
+      row('Public key → address', 'Keccak-256', 'one of the 512 bits of x ‖ y', '160-bit address', r.addr, 'Full avalanche, which is the design goal of a hash.') +
+      row('Address → EIP-55 pattern', 'Keccak-256', 'one of the 160 address bits', '40 capital-or-not decisions', r.eip, 'About half of the case decisions change, so a typo almost always breaks the pattern.');
+    prog.textContent = `done, ${n} trials per step`; btn.disabled = false; busy.av = false;
+  }
+
+  /* ---- 2 · address distribution ---- */
+  async function runDist() {
+    if (busy.ds) return; busy.ds = true;
+    const n = Number($('dsN').value), prog = $('dsProg'), btn = $('dsRun'); btn.disabled = true;
+    const digits = new Array(16).fill(0), ones = new Array(160).fill(0), letters = [];
+    let upper = 0, lett = 0;
+    for (let t = 0; t < n; t++) {
+      const k = (bytesToBig(randomBytes(32)) % (SECP.n - 1n)) + 1n;
+      const a = addressFromPublic(publicPoint(k));
+      for (let i = 0; i < 40; i++) digits[parseInt(a.hex[i], 16)]++;
+      for (let j = 0; j < 160; j++) ones[j] += (a.bytes[j >> 3] >> (7 - (j & 7))) & 1;
+      const cs = eip55(a.hex); let L = 0;
+      for (const ch of cs) if (ch >= 'A' && ch <= 'f') { L++; if (ch <= 'F') upper++; }
+      lett += L; letters.push(L);
+      if (t % 100 === 99) { prog.textContent = `${t + 1} / ${n}`; await tick(); }
+    }
+    const chiR = chiSquareFlat(digits), frac = ones.map((c) => c / n), sigma = Math.sqrt(0.25 / n);
+    const out = frac.filter((f) => Math.abs(f - 0.5) > 3 * sigma).length, maxZ = Math.max(...frac.map((f) => Math.abs(f - 0.5) / sigma));
+    const mean = frac.reduce((s, v) => s + v, 0) / 160, lm = lett / n;
+    $('dsOut').innerHTML =
+      `<div class="cards" style="margin:8px 0"><figure><div class="fig-cap">frequency of each hex digit (${n * 40} digits)</div>${barChart(digits, { expected: (n * 40) / 16, aria: 'Frequency of each hexadecimal digit in the addresses' })}</figure>` +
+      `<figure><div class="fig-cap">share of ones in each of the 160 bits</div>${dotPlot(frac, sigma, 'Share of ones for each address bit')}</figure></div>` +
+      `<p class="stat-line">digits: χ² = ${chiR.chi.toFixed(1)} on ${chiR.df} d.f., p ≈ ${chiR.pValue.toFixed(2)}</p>` +
+      `<p class="stat-line">bits: mean share of ones ${mean.toFixed(4)}, largest deviation ${maxZ.toFixed(1)}σ, ${out} of 160 outside ±3σ (about 0.4 expected)</p>` +
+      `<p class="stat-line">EIP-55: ${lm.toFixed(2)} letters per address on average (expected 15.00), ${pct(upper / lett)} of them capitals (expected 50%), fewest ${Math.min(...letters)}, most ${Math.max(...letters)}</p>` +
+      `<p class="find">${chiR.pValue > 0.01 && out <= 3 ? 'Every digit and every bit is consistent with a uniform random value, as expected after a hash.' : 'Some deviation shows up. Rerun with more addresses before drawing a conclusion.'} The red dashed line is the expected value, the dots outside the band would be red. The uniformity comes from Keccak-256 (HMWK 1 showed that the curve alone is not uniform). A uniform 160-bit address is why two wallets do not meet by accident.</p>`;
+    prog.textContent = `done, ${n} addresses`; btn.disabled = false; busy.ds = false;
+  }
+
+  /* ---- 3 · checksums ---- */
+  async function runChecks() {
+    if (busy.ck) return; busy.ck = true;
+    const n = Number($('ckN').value), prog = $('ckProg'), btn = $('ckRun'); btn.disabled = true;
+    const HEXC = '0123456789abcdefABCDEF', cnt = { rnd: 0, sub: 0, e1: 0, e2: 0, e3: 0 };
+    let minL = 99, maxL = 0;
+    const phraseOf = (idx) => idx.map((i) => WORDLIST[i]).join(' ');
+    for (let t = 0; t < n; t++) {
+      if (checkMnemonic(phraseOf(Array.from({ length: 12 }, () => rnd(2048)))).ok) cnt.rnd++;
+      const base = entropyToMnemonic(randomBytes(16)).indices.slice(), pos = rnd(12);
+      let w; do { w = rnd(2048); } while (w === base[pos]);
+      base[pos] = w; if (checkMnemonic(phraseOf(base)).ok) cnt.sub++;
+      const lower = toHex(randomBytes(20)), good = eip55(lower), L = (good.match(/[A-F]/gi) || []).length;
+      minL = Math.min(minL, L); maxL = Math.max(maxL, L);
+      const p = rnd(40); let ch; do { ch = HEXC[rnd(22)]; } while (ch === good[p]);
+      if (checkEip55(good.slice(0, p) + ch + good.slice(p + 1)) === 'valid') cnt.e1++;
+      const q = rnd(39); if (good[q] !== good[q + 1] && checkEip55(good.slice(0, q) + good[q + 1] + good[q] + good.slice(q + 2)) === 'valid') cnt.e2++;
+      const letterPos = []; for (let i = 0; i < 40; i++) if (/[a-f]/i.test(good[i])) letterPos.push(i);
+      if (letterPos.length) { const i = letterPos[rnd(letterPos.length)], c2 = good[i] === good[i].toLowerCase() ? good[i].toUpperCase() : good[i].toLowerCase(); if (checkEip55(good.slice(0, i) + c2 + good.slice(i + 1)) === 'valid') cnt.e3++; }
+      if (t % 500 === 499) { prog.textContent = `${t + 1} / ${n}`; await tick(); }
+    }
+    const exp55 = Math.pow(1 - 6 / 16 + 6 / 32, 40);
+    const line = (name, c, e, note) => `<tr><td>${name}</td><td class="m">${c} of ${n} (${pct(c / n, 3)})</td><td>${e}${note ? `<br><span class="note">${note}</span>` : ''}</td></tr>`;
+    $('ckBody').innerHTML =
+      line('BIP-39: a random 12-word sequence', cnt.rnd, `${pct(1 / 16, 2)} = 1 in 16`, '4 checksum bits') +
+      line('BIP-39: one word of a valid phrase replaced', cnt.sub, `about ${pct(1 / 16, 2)} = 1 in 16`, 'wrong phrases that still pass are rare but real') +
+      line('EIP-55: one character of an address changed', cnt.e1, `about ${(exp55 * n).toFixed(1)} of ${n}`, `1 in ${Math.round(1 / exp55).toLocaleString('en-US')}`) +
+      line('EIP-55: two neighbouring characters swapped', cnt.e2, `about ${(exp55 * n).toFixed(1)} of ${n}`, 'same odds as a changed character') +
+      line('EIP-55: only the case of one letter changed', cnt.e3, '0', 'the lowercase text is unchanged, so the checksum is recomputed to the same pattern and the change is always seen');
+    $('ckFind').textContent =
+      `A 12-word phrase carries 4 check bits, so a wrong phrase passes 1 time in 16. An address carries about one check bit per letter: ${minL} to ${maxL} letters in these ${n} addresses, 15 on average, so a typo passes about 1 time in ${Math.round(1 / exp55).toLocaleString('en-US')}. The protection is much stronger than in BIP-39, but it varies from address to address, and an address made only of digits has none. Both are checksums against accidents. Neither stops anyone who changes the text on purpose, because the checksum can be recomputed.`;
+    prog.textContent = `done, ${n} trials per row`; btn.disabled = false; busy.ck = false;
+  }
+
+  /* ============================= wiring ============================= */
+  mnem.addEventListener('input', update);
+  pass.addEventListener('input', update);
+  path.addEventListener('input', update);
+  $('btnTest').addEventListener('click', () => { mnem.value = TEST; pass.value = ''; path.value = DEFAULT_PATH; update(); });
+  $('btnGen12').addEventListener('click', () => { mnem.value = entropyToMnemonic(randomBytes(16)).words.join(' '); update(); });
+  $('btnGen24').addEventListener('click', () => { mnem.value = entropyToMnemonic(randomBytes(32)).words.join(' '); update(); });
+  $('labIn').addEventListener('input', renderLab);
+  $('chkIn').addEventListener('input', renderChk);
+  $('avRun').addEventListener('click', runAvalanche);
+  $('dsRun').addEventListener('click', runDist);
+  $('ckRun').addEventListener('click', runChecks);
+
+  update();
+  renderLab();
+  window.__hmwk2 = { runAvalanche, runDist, runChecks };
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) { io.disconnect(); runChecks().then(runDist).then(runAvalanche); }
+    }, { rootMargin: '300px' });
+    io.observe($('stats'));
+  }
+})();
+
+</script>
+</html>
