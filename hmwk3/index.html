@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Penetration scores: LLN and CLT simulation</title>
+<style>
+:root{--bg:#edf1f4;--card:#fbfcfd;--ink:#10202e;--mut:#5a6b79;--line:#d2dbe2;--ac:#0b7285;--grid:#e3e9ed;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1319;--card:#131d25;--ink:#e4edf3;--mut:#8a9ba8;--line:#24323d;--ac:#4fd1c5;--grid:#1a2731}}
+:root[data-theme="dark"]{--bg:#0c1319;--card:#131d25;--ink:#e4edf3;--mut:#8a9ba8;--line:#24323d;--ac:#4fd1c5;--grid:#1a2731}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:30px 16px 60px}
+h1,h2{font-family:"Iowan Old Style",Palatino,"Palatino Linotype",Georgia,serif;font-weight:600;letter-spacing:-.01em}
+h1{font-size:clamp(1.7rem,4.5vw,2.5rem);line-height:1.1;margin:0 0 10px;max-width:22ch}
+h2{font-size:1.45rem;margin:42px 0 4px}
+h3{font-size:.86rem;margin:0 0 6px;font-weight:600}
+p{margin:6px 0;max-width:72ch}
+.mut{color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px}
+.ctl{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:end;margin-top:20px}
+.ctl label{display:flex;flex-direction:column;gap:5px;font-size:.82rem;color:var(--mut);min-width:150px}
+.ctl b{color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
+select,input,button{font:inherit;color:var(--ink)}
+select,input[type=number]{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+input[type=range]{accent-color:var(--ac)}
+button{background:var(--ink);color:var(--bg);border:0;border-radius:4px;padding:8px 16px;cursor:pointer;font-weight:600}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+canvas{width:100%;height:210px;display:block}
+.g4 canvas{height:170px}
+.tabs{display:flex;gap:6px;margin:12px 0 10px;flex-wrap:wrap}
+.tabs button{background:var(--card);color:var(--ink);border:1px solid var(--line);font-weight:500}
+.tabs button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font:12.5px ui-monospace,Menlo,Consolas,monospace}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--mut);vertical-align:bottom}
+td i{color:var(--mut);font-style:normal}
+th:first-child,td:first-child{text-align:left}
+.key{font-size:.8rem;color:var(--mut);margin-top:8px}
+li{margin:7px 0;max-width:74ch}
+</style>
+</head>
+<body>
+<main>
+<h1>Penetration scores of n systems and m attackers</h1>
+<p class="mut">Each attacker works through n systems and scores Xᵢ on step i, with i.i.d. increments. For m independent attackers the page simulates the total score Sₙ, the average Sₙ/n and the normalized score Sₙ/√n, and compares them with the Law of Large Numbers and the Central Limit Theorem.</p>
+
+<section class="card ctl">
+<label>Score model<select id="model"><option value="bern">Bernoulli, Xᵢ in {0, 1}</option><option value="rad" selected>Rademacher, Xᵢ in {−1, +1}</option></select></label>
+<label>Success probability p = <b id="pv"></b><input type="range" id="p" min="0.05" max="0.95" step="0.05" value="0.3"></label>
+<label>Attackers m = <b id="mv"></b><input type="range" id="m" min="50" max="5000" step="50" value="1000"></label>
+<label>LLN tolerance ε = <b id="ev"></b><input type="range" id="e" min="0.01" max="0.2" step="0.01" value="0.05"></label>
+<label>Random seed<input type="number" id="seed" value="42"></label>
+<button id="go">Run again</button>
+</section>
+<p id="theory" class="mut"></p>
+
+<h2>Sample trajectories</h2>
+<p class="mut">The first 25 attackers, up to n = 10,000 systems. Dashed: theoretical centre. Dotted: ±2σ envelope (left, right) or ±ε band (middle).</p>
+<div class="grid">
+<div class="card"><h3>Total score Sₖ</h3><canvas id="c1"></canvas></div>
+<div class="card"><h3>Average score Sₖ/k (log scale in k)</h3><canvas id="c2"></canvas></div>
+<div class="card"><h3>Normalized score Sₖ/√k (log scale in k)</h3><canvas id="c3"></canvas></div>
+</div>
+
+<h2>Distributions across the m attackers</h2>
+<p class="mut">Histogram of each quantity at n = 10, 100, 1,000 and 10,000, with the normal approximation drawn over it.</p>
+<div class="tabs" id="tabs"><button data-q="0">Total Sₙ</button><button data-q="1">Average Sₙ/n</button><button data-q="2" class="on">Normalized Sₙ/√n</button></div>
+<div class="grid g4">
+<div class="card"><canvas id="h0"></canvas></div><div class="card"><canvas id="h1"></canvas></div>
+<div class="card"><canvas id="h2"></canvas></div><div class="card"><canvas id="h3"></canvas></div>
+</div>
+<p class="key" id="note"></p>
+
+<h2>Law of Large Numbers, variances and CLT check</h2>
+<div class="grid" style="margin-bottom:12px">
+<div class="card"><h3>P(|Sₙ/n − μ| &gt; ε) against n (log scale)</h3><canvas id="c4"></canvas>
+<p class="key">Teal: simulated frequency over m attackers. Dashed: Chebyshev bound σ²/(nε²).</p></div>
+<div class="card"><h3>Reading the table</h3>
+<p>Variance cells show simulated value, then theory. Var(Sₙ) = nσ² grows, Var(Sₙ/n) = σ²/n vanishes, and Var(Sₙ/√n) = σ² stays fixed, which is why √n is the scale of the fluctuations.</p>
+<p>The last column is the Kolmogorov–Smirnov distance between the standardized scores (Sₙ − nμ)/(σ√n) and the standard normal CDF Φ.</p>
+<p class="mut" id="ksn"></p></div>
+</div>
+<div class="card tw"><table id="tab"></table></div>
+
+<h2>What n and m do to the aggregate score</h2>
+<p class="mut">Adding up the scores of all m attackers gives the aggregate T = Σⱼ Sₙ⁽ʲ⁾, a sum of mn i.i.d. increments.</p>
+<div class="card tw"><table id="agg"></table></div>
+<ul>
+<li><b>System size n</b> sets the scale of a single attacker. The mean score nμ grows linearly, the spread σ√n only like a square root, so Sₙ/n concentrates around μ (LLN) while Sₙ/√n keeps a constant spread σ.</li>
+<li><b>Number of attackers m</b> does not change the law of one attacker. It sets how sharply the histogram resolves that law, with sampling noise of order 1/√m, and it scales the aggregate: mean mnμ, standard deviation σ√(mn).</li>
+<li><b>Rademacher case.</b> Each step gains or loses a point with equal chance, so μ = 0 and the aggregate is a pure random walk with no drift. Sₙ/√n approaches N(0, 1) and the aggregate wanders on the scale √(mn).</li>
+<li><b>Bernoulli case.</b> Sₙ counts the compromised systems, so μ = p &gt; 0 and the aggregate drifts upward. Its relative fluctuation σ/(μ√(mn)) shrinks as either n or m grows. Sₙ/√n is centred at μ√n and diverges, so only (Sₙ − nμ)/√n converges to a normal.</li>
+</ul>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const CK=[10,30,100,300,1000,3000,10000],NM=1e4,NP=25;
+let Q=2,rad,P,m,eps,MU,V,SG,SS,PA;
+const fmt=v=>{const a=Math.abs(v);return a>=1e4||(a&&a<.01)?v.toExponential(0).replace("e+","e"):+v.toPrecision(3)+""};
+const f3=v=>v>=1e5||(v&&v<1e-3)?v.toExponential(2):+v.toPrecision(3)+"";
+const erf=x=>{const t=1/(1+.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return x<0?-y:y};
+const Phi=z=>.5*(1+erf(z/Math.SQRT2));
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function ticks(a,b,k=5){const s=(b-a)/k,p=10**Math.floor(Math.log10(s)),r=s/p,st=(r<1.5?1:r<3.5?2:r<7.5?5:10)*p,o=[];for(let v=Math.ceil(a/st)*st;v<=b+1e-9;v+=st)o.push(+v.toFixed(10));return o}
+function frame(cv,xl,yl,lg){
+ const d=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;cv.width=w*d;cv.height=h*d;
+ const g=cv.getContext("2d");g.setTransform(d,0,0,d,0,0);
+ const P={l:44,r:10,t:8,b:22},cs=getComputedStyle(document.documentElement),C=n=>cs.getPropertyValue(n).trim(),tx=lg?Math.log10:v=>v;
+ const X=v=>P.l+(tx(v)-tx(xl[0]))/(tx(xl[1])-tx(xl[0]))*(w-P.l-P.r),Y=v=>h-P.b-(v-yl[0])/(yl[1]-yl[0])*(h-P.t-P.b);
+ g.font="11px ui-monospace,Menlo,Consolas,monospace";g.fillStyle=C("--mut");g.strokeStyle=C("--grid");g.lineWidth=1;
+ g.textAlign="right";g.textBaseline="middle";
+ for(const v of ticks(yl[0],yl[1])){g.beginPath();g.moveTo(P.l,Y(v));g.lineTo(w-P.r,Y(v));g.stroke();g.fillText(fmt(v),P.l-5,Y(v))}
+ g.textAlign="center";g.textBaseline="top";
+ const xt=lg?Array.from({length:Math.round(Math.log10(xl[1]/xl[0]))+1},(_,i)=>xl[0]*10**i):ticks(xl[0],xl[1],4);
+ for(const v of xt)g.fillText(fmt(v),X(v),h-P.b+5);
+ return{g,X,Y,C,P,w,h}
+}
+function line(cv,S,xl,yl,lg){
+ const f=frame(cv,xl,yl,lg),g=f.g;
+ g.save();g.beginPath();g.rect(f.P.l,f.P.t,f.w-f.P.l-f.P.r,f.h-f.P.t-f.P.b);g.clip();
+ for(const s of S){g.beginPath();g.strokeStyle=f.C("--"+s.c);g.globalAlpha=s.a||1;g.lineWidth=s.w||1;g.setLineDash(s.d||[]);
+  s.x.forEach((x,i)=>i?g.lineTo(f.X(x),f.Y(s.y[i])):g.moveTo(f.X(x),f.Y(s.y[i])));g.stroke()}
+ g.restore()
+}
+function simulate(){
+ const r=rng(+$("seed").value||1),pr=rad?.5:P;
+ SS=CK.map(()=>new Float64Array(m));PA=Array.from({length:NP},()=>new Float32Array(NM+1));
+ for(let j=0;j<m;j++){let s=0,c=0;const pa=j<NP?PA[j]:null;
+  for(let i=1;i<=NM;i++){const u=r()<pr;s+=rad?(u?1:-1):(u?1:0);if(pa)pa[i]=s;if(i===CK[c]){SS[c][j]=s;c++}}}
+}
+function drawPaths(){
+ const lin=[0,...Array.from({length:1000},(_,i)=>10*(i+1))],lg=[...new Set(Array.from({length:600},(_,i)=>Math.round(10**(4*i/599))))];
+ const T=(gr,f)=>PA.map(p=>({x:gr,y:gr.map(k=>f(p[k],k)),c:"ac",a:.6,w:1}));
+ const env=(gr,cen,w)=>[{x:gr,y:gr.map(cen),c:"ink",d:[6,4],w:1.3},...[-1,1].map(s=>({x:gr,y:gr.map(k=>cen(k)+s*w(k)),c:"mut",d:[2,3],w:1.2}))];
+ const ext=S=>{let a=1/0,b=-1/0;for(const s of S)for(const v of s.y){if(v<a)a=v;if(v>b)b=v}const d=(b-a)*.05||1;return[a-d,b+d]};
+ let S=[...T(lin,s=>s),...env(lin,k=>k*MU,k=>2*SG*Math.sqrt(k))];line($("c1"),S,[0,NM],ext(S));
+ const hw=Math.max(3*SG/Math.sqrt(10),1.3*eps);
+ S=[...T(lg,(s,k)=>s/k),...env(lg,()=>MU,()=>eps)];line($("c2"),S,[10,NM],[MU-hw,MU+hw],1);
+ S=[...T(lg,(s,k)=>s/Math.sqrt(k)),...env(lg,k=>MU*Math.sqrt(k),()=>2*SG)];line($("c3"),S,[1,NM],ext(S),1);
+}
+function hist(cv,c){
+ const n=CK[c],a=SS[c],sc=[1,n,Math.sqrt(n)][Q],mean=n*MU/sc,sd=SG*Math.sqrt(n)/sc;
+ const st=rad?2:1,k=Math.max(1,Math.round(8*SG*Math.sqrt(n)/36/st)),w=st*k,s0=rad?n%2:0,cnt=new Map();
+ for(const v of a){const j=Math.floor((v-s0+st/2)/w);cnt.set(j,(cnt.get(j)||0)+1)}
+ const bars=[];let top=0;
+ for(const[j,ct]of cnt){const x0=(s0-st/2+j*w)/sc,d=ct/m/(w/sc);bars.push([x0,x0+w/sc,d]);if(d>top)top=d}
+ const pdf=x=>Math.exp(-.5*((x-mean)/sd)**2)/(sd*Math.sqrt(2*Math.PI));
+ const f=frame(cv,[mean-4*sd,mean+4*sd],[0,Math.max(top,pdf(mean))*1.12]),g=f.g;
+ g.fillStyle=f.C("--ac");g.globalAlpha=.65;
+ for(const[x0,x1,d]of bars)g.fillRect(f.X(x0),f.Y(d),Math.max(1,f.X(x1)-f.X(x0)-1),f.Y(0)-f.Y(d));
+ g.globalAlpha=1;g.strokeStyle=f.C("--ink");g.lineWidth=1.5;g.beginPath();
+ for(let i=0;i<=120;i++){const x=mean-4*sd+8*sd*i/120;i?g.lineTo(f.X(x),f.Y(pdf(x))):g.moveTo(f.X(x),f.Y(pdf(x)))}
+ g.stroke();g.fillStyle=f.C("--ink");g.font="600 12px system-ui,sans-serif";g.textAlign="left";g.textBaseline="top";g.fillText("n = "+n.toLocaleString("en-US"),f.P.l+6,f.P.t+2);
+}
+function drawHists(){
+ [0,2,4,6].forEach((c,i)=>hist($("h"+i),c));
+ $("note").innerHTML="Bars: simulated frequency. Line: "+["N(nμ, nσ²) for Sₙ","N(μ, σ²/n) for Sₙ/n",rad?"N(0, 1) for Sₙ/√n, the CLT limit":"N(μ√n, σ²) for Sₙ/√n"][Q]+"."+
+  (Q==2&&!rad?" With μ ≠ 0 the normalized score drifts like μ√n, so the CLT applies to the centred version (Sₙ − nμ)/√n.":"");
+}
+function tables(){
+ let rows="",ag="",lr=[],ch=[];
+ CK.forEach((n,c)=>{
+  const a=SS[c],mean=a.reduce((x,y)=>x+y,0)/m;let v=0,ex=0,T=0;
+  for(const x of a){v+=(x-mean)**2;T+=x;if(Math.abs(x/n-MU)>eps)ex++}
+  v/=m;ex/=m;
+  const z=Float64Array.from(a,x=>(x-n*MU)/(SG*Math.sqrt(n))).sort();let ks=0;
+  z.forEach((x,i)=>{const F=Phi(x);ks=Math.max(ks,Math.abs((i+1)/m-F),Math.abs(i/m-F))});
+  const cb=Math.min(1,V/(n*eps*eps));lr.push(ex);ch.push(cb);
+  rows+=`<tr><td>${n.toLocaleString("en-US")}<td>${f3(v)} <i>/ ${f3(n*V)}</i><td>${f3(v/n/n)} <i>/ ${f3(V/n)}</i><td>${f3(v/n)} <i>/ ${f3(V)}</i><td>${f3(ex)} <i>≤ ${f3(cb)}</i><td>${f3(ks)}`;
+  const E=m*n*MU,sd=SG*Math.sqrt(m*n);
+  ag+=`<tr><td>${n.toLocaleString("en-US")}<td>${f3(E)}<td>${f3(sd)}<td>${f3(T)}<td>${f3((T-E)/sd)}<td>${rad?"undefined (μ = 0)":f3(sd/E)}`;
+ });
+ $("tab").innerHTML="<tr><th>n<th>Var(Sₙ)<br>sim / theory<th>Var(Sₙ/n)<br>sim / theory<th>Var(Sₙ/√n)<br>sim / theory<th>P(|Sₙ/n − μ| &gt; ε)<br>sim ≤ Chebyshev<th>KS(Zₙ, Φ)"+rows;
+ $("agg").innerHTML="<tr><th>n<th>E[T] = mnμ<th>sd(T) = σ√(mn)<th>observed T<th>z = (T − E[T])/sd<th>sd(T)/E[T]"+ag;
+ $("ksn").textContent="Sampling noise: with m = "+m+", a KS value below about 1.36/√m = "+f3(1.36/Math.sqrt(m))+" is consistent with a normal limit at the 5% level. Lattice effects at small n inflate it.";
+ line($("c4"),[{x:CK,y:ch,c:"mut",d:[6,4],w:1.5},{x:CK,y:lr,c:"ac",w:2.2}],[10,NM],[0,1.03],1);
+}
+function draw(){if(!SS)return;drawPaths();drawHists();tables()}
+function lab(){$("pv").textContent=(+$("p").value).toFixed(2);$("mv").textContent=$("m").value;$("ev").textContent=(+$("e").value).toFixed(2);$("p").disabled=$("model").value=="rad"}
+function run(){
+ lab();rad=$("model").value=="rad";P=+$("p").value;m=+$("m").value;eps=+$("e").value;
+ MU=rad?0:P;V=rad?1:P*(1-P);SG=Math.sqrt(V);
+ $("theory").textContent=rad?"Rademacher: μ = E[X] = 0 and σ² = Var(X) = 1.":"Bernoulli(p = "+P.toFixed(2)+"): μ = p = "+P.toFixed(2)+" and σ² = p(1 − p) = "+V.toFixed(3)+".";
+ simulate();draw();
+}
+let t1,t2;
+["model","p","m","e","seed"].forEach(i=>$(i).addEventListener("input",()=>{lab();clearTimeout(t1);t1=setTimeout(run,150)}));
+$("go").onclick=run;
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{Q=+b.dataset.q;document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x==b));drawHists()});
+addEventListener("resize",()=>{clearTimeout(t2);t2=setTimeout(draw,120)});
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",draw);
+new MutationObserver(draw).observe(document.documentElement,{attributes:true});
+run();
+</script>
+</body>
+</html>
