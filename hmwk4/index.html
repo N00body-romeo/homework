@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMWK: Welford’s recurrences and sampling statistics</title>
+<style>
+:root{--paper:#f1f5f7;--panel:#fff;--ink:#14232e;--muted:#52657a;--rule:#c8d4dc;--grid:#dde6ec;--c1:#1b4fd8;--c2:#d9480f;--code:#0d1b26;--codeink:#d6e4ee;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#0f1a22;--panel:#16232d;--ink:#e4edf3;--muted:#9bb0c0;--rule:#2c3e4b;--grid:#22333f;--c1:#7aa2ff;--c2:#ff8f5c;--code:#0a131a;color-scheme:dark}}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);font:18px/1.65 Georgia,"Iowan Old Style","Palatino Linotype",serif}
+.wrap{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+h1,h2,h3,th,label,button,.t,.legend{font-family:"Avenir Next","Segoe UI",system-ui,sans-serif}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.1;margin:0 0 12px;letter-spacing:-.02em}
+h2{font-size:26px;margin:56px 0 12px;padding-top:20px;border-top:2px solid var(--ink)}
+h3{font-size:18px;margin:32px 0 8px}
+p{max-width:66ch}
+.lead{color:var(--muted);font-size:20px}
+.eq{background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--c1);padding:10px 16px;margin:10px 0;overflow-x:auto;font-size:19px}
+.eq.key{border-left-color:var(--c2)}
+ol{padding-left:22px}li{margin-bottom:10px}
+pre{background:var(--code);color:#d6e4ee;padding:16px;border-radius:6px;overflow-x:auto;font:14px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+code{font:.85em ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;background:var(--panel);border:1px solid var(--rule);padding:16px;margin:18px 0}
+label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+input,select{font:16px system-ui,sans-serif;padding:8px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink)}
+button{font-size:16px;font-weight:700;padding:10px 18px;border:0;border-radius:4px;background:var(--c1);color:#fff;cursor:pointer;align-self:end}
+@media (prefers-color-scheme:dark){button{color:#0f1a22}}
+:focus-visible{outline:3px solid var(--c2);outline-offset:2px}
+#status{font:14px system-ui,sans-serif;color:var(--muted);min-height:1.4em}
+#status.err{color:var(--c2);font-weight:700}
+.scroll{overflow-x:auto;margin:8px 0 20px}
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel)}
+th,td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th{font-weight:700;background:var(--paper)}
+th:first-child,td:first-child{text-align:left}
+.chart{background:var(--panel);border:1px solid var(--rule);padding:8px}
+svg{width:100%;height:auto;display:block}
+svg .gl{stroke:var(--grid);stroke-width:1}svg .ax{stroke:var(--muted)}
+svg .t{fill:var(--muted);font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:14px;margin:8px 0 0;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+@media (prefers-reduced-motion:no-preference){button{transition:filter .15s}button:hover{filter:brightness(1.1)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>HMWK: Welford’s recurrences and sampling statistics</h1>
+<p class="lead">Exercise 1 derives the one-pass update for the sum of squares and the variance. Exercise 2 runs it on m hackers attacking n systems and compares the results with μ and σ².</p>
+</header>
+
+<section id="ex1">
+<h2>Exercise 1: Welford’s recurrence formulas</h2>
+<p>Take scores x<sub>1</sub>, …, x<sub>k</sub>. Write M<sub>k</sub> = (x<sub>1</sub> + … + x<sub>k</sub>)/k for the mean, SS<sub>k</sub> = Σ (x<sub>i</sub> − M<sub>k</sub>)² for the sum of squares, and s<sub>k</sub>² = SS<sub>k</sub>/(k − 1) for the sample variance (k ≥ 2).</p>
+
+<h3>Knuth’s recurrence for the mean</h3>
+<p>From k·M<sub>k</sub> = (k − 1)·M<sub>k−1</sub> + x<sub>k</sub>:</p>
+<div class="eq">M<sub>k</sub> = M<sub>k−1</sub> + (x<sub>k</sub> − M<sub>k−1</sub>) / k &nbsp;&nbsp;(A)</div>
+<p>Equivalently, x<sub>k</sub> − M<sub>k−1</sub> = k·(M<sub>k</sub> − M<sub>k−1</sub>) &nbsp;(B).</p>
+
+<h3>The same approach for SS</h3>
+<p>Expand the square: SS<sub>k</sub> = Σ x<sub>i</sub>² − k·M<sub>k</sub>². Subtracting the same identity at k − 1 leaves only the last term of the first sum:</p>
+<ol>
+<li>SS<sub>k</sub> − SS<sub>k−1</sub> = x<sub>k</sub>² − k·M<sub>k</sub>² + (k − 1)·M<sub>k−1</sub>²</li>
+<li>Since (k − 1)·M<sub>k−1</sub> = k·M<sub>k</sub> − x<sub>k</sub>, we get (k − 1)·M<sub>k−1</sub>² = k·M<sub>k</sub>·M<sub>k−1</sub> − x<sub>k</sub>·M<sub>k−1</sub></li>
+<li>Substituting and grouping: SS<sub>k</sub> − SS<sub>k−1</sub> = x<sub>k</sub>·(x<sub>k</sub> − M<sub>k−1</sub>) − k·M<sub>k</sub>·(M<sub>k</sub> − M<sub>k−1</sub>)</li>
+<li>By (B), k·(M<sub>k</sub> − M<sub>k−1</sub>) = x<sub>k</sub> − M<sub>k−1</sub>, so the difference is (x<sub>k</sub> − M<sub>k</sub>)·(x<sub>k</sub> − M<sub>k−1</sub>)</li>
+</ol>
+<div class="eq key">SS<sub>k</sub> = SS<sub>k−1</sub> + (x<sub>k</sub> − M<sub>k−1</sub>)(x<sub>k</sub> − M<sub>k</sub>) = SS<sub>k−1</sub> + (k − 1)/k · (x<sub>k</sub> − M<sub>k−1</sub>)²</div>
+<p>The second form uses x<sub>k</sub> − M<sub>k</sub> = (k − 1)/k · (x<sub>k</sub> − M<sub>k−1</sub>), which follows from (A). Start from M<sub>0</sub> = 0 and SS<sub>0</sub> = 0.</p>
+
+<h3>Variance</h3>
+<p>Divide by k − 1 (or by k for the population variance):</p>
+<div class="eq key">s<sub>k</sub>² = SS<sub>k</sub>/(k − 1) = (k − 2)/(k − 1) · s<sub>k−1</sub>² + (x<sub>k</sub> − M<sub>k−1</sub>)² / k &nbsp;&nbsp;(k ≥ 2)</div>
+<p>One pass, constant memory, and no subtraction of two huge nearly equal numbers (the weakness of Σx² − k·M²).</p>
+
+<h3>Code</h3>
+<p>The three core lines are the declaration of <code>d</code>, the mean update and the SS update. This exact function is what runs the simulation below.</p>
+<pre id="code"></pre>
+<p id="check" class="lead" style="font-size:16px"></p>
+</section>
+
+<section id="ex2">
+<h2>Exercise 2: Sampling mean and variance</h2>
+<p>Each hacker attempts n systems and gets an integer score from 0 to 10 per system, drawn i.i.d. from the distribution you pick. For every hacker, Welford gives the sampling mean and the sampling variance of their n scores. Then the m values are averaged and compared with the theoretical μ and σ².</p>
+<div class="controls">
+<label>Score distribution
+<select id="dist">
+<option value="b50">Binomial(10, 0.5)</option>
+<option value="b30">Binomial(10, 0.3)</option>
+<option value="uni">Discrete uniform {0, …, 10}</option>
+</select></label>
+<label>Hackers m (2–5000)<input id="m" type="number" value="2000" min="2" max="5000"></label>
+<label>Values of n (≥ 2, up to 8)<input id="ns" type="text" value="2, 5, 10, 30, 100, 1000"></label>
+<label>Random seed<input id="seed" type="number" value="42"></label>
+<button id="run" type="button">Run experiment</button>
+</div>
+<div id="status" role="status" aria-live="polite"></div>
+<p id="theory"></p>
+
+<h3>Averages across the m hackers</h3>
+<div class="scroll"><table id="t1"></table></div>
+<p>The last column divides SS by n instead of n − 1, to show what the correction does.</p>
+
+<h3>Spread across the m hackers</h3>
+<div class="scroll"><table id="t2"></table></div>
+
+<div class="chart"><svg id="chart" viewBox="0 0 640 340" role="img" aria-label="Log-log plot of the standard deviation of sampling means and sampling variances against n"></svg></div>
+<div class="legend">
+<span><i class="sw" style="background:var(--c1)"></i>SD of sampling means (dots: simulated, line: σ/√n)</span>
+<span><i class="sw" style="background:var(--c2)"></i>SD of sampling variances (dots: simulated, line: theory)</span>
+</div>
+
+<h3>Conclusions</h3>
+<p><b>Averages against theory.</b> For every n, the average of the sampling means sits on μ, because the sample mean is an unbiased estimator: E[x̄] = μ. The average of the sampling variances sits on σ² when the denominator is n − 1: E[s²] = σ². With denominator n the average is σ²·(n − 1)/n, which is clearly too low for small n and disappears as n grows.</p>
+<p><b>Why this matters in inference.</b> In practice there is one trajectory and μ, σ² are unknown. Unbiasedness says x̄ and s² are not systematically off, so they are legitimate stand-ins for μ and σ². The spread of x̄ across hackers is its sampling distribution, and its standard deviation σ/√n is the standard error, which is what confidence intervals and tests are built on (with the CLT supplying the shape). Welford’s recurrences give both estimates in a single streaming pass.</p>
+<p><b>Effect of n.</b> The averages do not move, since they were already centred on μ and σ². What shrinks is the variability. The standard deviation of the sampling means follows σ/√n: quadrupling n halves it. The variance of s² is (μ<sub>4</sub> − (n − 3)/(n − 1)·σ⁴)/n, also of order 1/n, so the two lines in the chart are parallel with slope −1/2 on log-log axes. The level of the s² line depends on the fourth moment of the distribution. As n grows, x̄ → μ and s² → σ² for each hacker (consistency, the law of large numbers).</p>
+</section>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ---- Exercise 1: Welford. `next()` returns the next score. ---- */
+function welford(n, next) {
+  let k = 0, M = 0, SS = 0;
+  while (k < n) {
+    const x = next(), d = x - M;   // d = x_k - M_{k-1}
+    M += d / ++k;                  // Knuth: update the mean
+    SS += d * (x - M);             // Welford: (x_k - M_{k-1})(x_k - M_k)
+  }
+  return { mean: M, ss: SS, var: k > 1 ? SS / (k - 1) : NaN };
+}
+$("code").textContent = welford.toString();
+
+/* ---- Exercise 2 helpers ---- */
+function binom(n, p) {
+  const out = []; let c = 1;
+  for (let k = 0; k <= n; k++) { out.push(c * Math.pow(p, k) * Math.pow(1 - p, n - k)); c = c * (n - k) / (k + 1); }
+  return out;
+}
+const DISTS = {
+  b50: { name: "Binomial(10, 0.5)", pmf: binom(10, 0.5) },
+  b30: { name: "Binomial(10, 0.3)", pmf: binom(10, 0.3) },
+  uni: { name: "Discrete uniform {0, …, 10}", pmf: Array(11).fill(1 / 11) }
+};
+function moments(pmf) {
+  const mu = pmf.reduce((a, p, k) => a + k * p, 0);
+  const c = j => pmf.reduce((a, p, k) => a + p * Math.pow(k - mu, j), 0);
+  return { mu, s2: c(2), m4: c(4) };
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function sampler(pmf, rand) {
+  const cdf = []; let s = 0;
+  for (const p of pmf) { s += p; cdf.push(s); }
+  return () => { const u = rand(); let k = 0; while (k < cdf.length - 1 && u > cdf[k]) k++; return k; };
+}
+const over = a => { let i = 0; return () => a[i++]; };
+const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+const f4 = v => v.toFixed(4);
+
+function setStatus(msg, bad) { const s = $("status"); s.textContent = msg; s.className = bad ? "err" : ""; }
+
+function run() {
+  const m = Number($("m").value), seed = Number($("seed").value) || 0;
+  const ns = [...new Set($("ns").value.split(/[\s,;]+/).map(Number)
+    .filter(v => Number.isInteger(v) && v >= 2 && v <= 20000))].sort((a, b) => a - b).slice(0, 8);
+  if (!Number.isInteger(m) || m < 2 || m > 5000) return setStatus("Hackers m must be an integer between 2 and 5000.", true);
+  if (!ns.length) return setStatus("Enter at least one n ≥ 2, separated by commas (for example 5, 50, 500).", true);
+
+  const D = DISTS[$("dist").value], th = moments(D.pmf), draw = sampler(D.pmf, rng(seed));
+  const rows = ns.map(n => {
+    const means = [], vars = [], biased = [];
+    for (let h = 0; h < m; h++) {
+      const r = welford(n, draw);
+      means.push(r.mean); vars.push(r.var); biased.push(r.ss / n);
+    }
+    const sm = welford(m, over(means)), sv = welford(m, over(vars));
+    return {
+      n, aM: sm.mean, aV: sv.mean, aB: avg(biased),
+      sdM: Math.sqrt(sm.var), sdV: Math.sqrt(sv.var),
+      thM: Math.sqrt(th.s2 / n),
+      thV: Math.sqrt((th.m4 - (n - 3) / (n - 1) * th.s2 * th.s2) / n)
+    };
+  });
+
+  $("theory").innerHTML = `${D.name}: μ = <b>${f4(th.mu)}</b>, σ² = <b>${f4(th.s2)}</b>.`;
+  $("t1").innerHTML = "<tr><th>n</th><th>Average of sampling means</th><th>μ</th><th>Average of s² (n − 1)</th><th>σ²</th><th>Average of SS/n</th></tr>" +
+    rows.map(r => `<tr><td>${r.n}</td><td>${f4(r.aM)}</td><td>${f4(th.mu)}</td><td>${f4(r.aV)}</td><td>${f4(th.s2)}</td><td>${f4(r.aB)}</td></tr>`).join("");
+  $("t2").innerHTML = "<tr><th>n</th><th>SD of sampling means</th><th>σ/√n</th><th>SD of sampling variances</th><th>Theory</th></tr>" +
+    rows.map(r => `<tr><td>${r.n}</td><td>${f4(r.sdM)}</td><td>${f4(r.thM)}</td><td>${f4(r.sdV)}</td><td>${f4(r.thV)}</td></tr>`).join("");
+  drawChart(rows);
+
+  // sanity check: Welford against the classic two-pass formulas on one trajectory
+  const xs = Array.from({ length: 40 }, draw), mu2 = avg(xs), ss2 = xs.reduce((a, x) => a + (x - mu2) ** 2, 0);
+  const w = welford(40, over(xs));
+  $("check").textContent = `Check on one trajectory of 40 scores: |Welford − two-pass| is ${Math.abs(w.mean - mu2).toExponential(1)} for the mean and ${Math.abs(w.ss - ss2).toExponential(1)} for SS.`;
+  setStatus(`Done: ${m} hackers, n = ${ns.join(", ")}.`);
+}
+
+function drawChart(rows) {
+  const W = 640, H = 340, L = 58, R = 16, T = 14, B = 46;
+  let x0 = Math.log10(rows[0].n), x1 = Math.log10(rows[rows.length - 1].n);
+  if (x1 - x0 < 0.3) { x0 -= 0.3; x1 += 0.3; }
+  const vals = rows.flatMap(r => [r.sdM, r.thM, r.sdV, r.thV]).filter(v => v > 0);
+  const y0 = Math.log10(Math.min(...vals)) - 0.1, y1 = Math.log10(Math.max(...vals)) + 0.1;
+  const px = n => L + (Math.log10(n) - x0) / (x1 - x0) * (W - L - R);
+  const py = v => T + (1 - (Math.log10(v) - y0) / (y1 - y0)) * (H - T - B);
+  let s = "";
+  for (let p = Math.floor(y0) - 1; p <= Math.ceil(y1) + 1; p++) for (const k of [1, 3]) {
+    const v = k * Math.pow(10, p), lv = Math.log10(v);
+    if (lv < y0 || lv > y1) continue;
+    s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${py(v)}" y2="${py(v)}"/><text class="t" x="${L - 8}" y="${py(v) + 4}" text-anchor="end">${+v.toPrecision(1)}</text>`;
+  }
+  for (const r of rows) s += `<line class="gl" x1="${px(r.n)}" x2="${px(r.n)}" y1="${T}" y2="${H - B}"/><text class="t" x="${px(r.n)}" y="${H - B + 18}" text-anchor="middle">${r.n}</text>`;
+  s += `<line class="ax" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/><line class="ax" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>`;
+  s += `<text class="t" x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">n (systems per hacker, log scale)</text>`;
+  s += `<text class="t" transform="translate(14 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">standard deviation across hackers</text>`;
+  const series = [["sdM", "thM", "var(--c1)"], ["sdV", "thV", "var(--c2)"]];
+  for (const [emp, theo, col] of series) {
+    s += `<polyline fill="none" stroke="${col}" stroke-width="2" points="${rows.map(r => px(r.n) + "," + py(r[theo])).join(" ")}"/>`;
+    s += rows.map(r => `<circle cx="${px(r.n)}" cy="${py(r[emp])}" r="4.5" fill="${col}"/>`).join("");
+  }
+  $("chart").innerHTML = s;
+}
+
+$("run").addEventListener("click", run);
+run();
+</script>
+</body>
+</html>
