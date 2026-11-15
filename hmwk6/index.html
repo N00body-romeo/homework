@@ -1,0 +1,377 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { Info, Calculator, Table as TableIcon, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+
+// --- Statistical Math Utilities ---
+
+// Standard Normal CDF (Abramowitz & Stegun approximation)
+const normalCDF = (z) => {
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.sqrt(2);
+  const t = 1.0 / (1.0 + 0.3275911 * x);
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+  const erf = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return 0.5 * (1 + sign * erf);
+};
+
+// Chi-Square P-Value Calculation
+const getChiSquarePValue = (chiSq, df) => {
+  if (chiSq < 0 || df < 1) return 1;
+  
+  if (df === 1) {
+    // Exact for df = 1 (Square of Standard Normal)
+    return 2 * (1 - normalCDF(Math.sqrt(chiSq)));
+  } else if (df === 2) {
+    // Exact for df = 2 (Exponential distribution)
+    return Math.exp(-chiSq / 2);
+  } else {
+    // Wilson-Hilferty transformation for df >= 3
+    const z = (Math.pow(chiSq / df, 1/3) - (1 - 2 / (9 * df))) / Math.sqrt(2 / (9 * df));
+    return 1 - normalCDF(z);
+  }
+};
+
+const SAMPLE_DATA = `Diet,Outcome
+Keto,Improved
+Keto,Improved
+Keto,No Change
+Keto,Worsened
+Vegan,Improved
+Vegan,Improved
+Vegan,Improved
+Vegan,No Change
+Mediterranean,Improved
+Mediterranean,Improved
+Mediterranean,No Change
+Mediterranean,No Change
+Standard,No Change
+Standard,Worsened
+Standard,Worsened
+Standard,Worsened
+Keto,Improved
+Vegan,Improved
+Mediterranean,Improved
+Standard,No Change
+Keto,No Change
+Vegan,No Change
+Mediterranean,Improved
+Standard,Worsened
+Standard,Worsened`;
+
+export default function StatisticalIndependenceTool() {
+  const [rawData, setRawData] = useState('');
+  const [condMode, setCondMode] = useState('none'); // 'none', 'row', 'col'
+
+  // Load sample data into text area
+  const loadSampleData = () => setRawData(SAMPLE_DATA);
+
+  // --- Data Processing Hook ---
+  const analysis = useMemo(() => {
+    if (!rawData.trim()) return null;
+
+    const lines = rawData.trim().split('\n').map(l => l.split(',').map(s => s.trim()).filter(Boolean));
+    // Filter valid lines
+    const validLines = lines.filter(l => l.length >= 2);
+    if (validLines.length < 2) return null; // Need at least header + 1 row
+
+    const headers = validLines[0];
+    const dataRows = validLines.slice(1);
+
+    const xLabels = Array.from(new Set(dataRows.map(r => r[0])));
+    const yLabels = Array.from(new Set(dataRows.map(r => r[1])));
+
+    if (xLabels.length < 1 || yLabels.length < 1) return null;
+
+    // Build Contingency Matrix
+    const matrix = Array(xLabels.length).fill(null).map(() => Array(yLabels.length).fill(0));
+    dataRows.forEach(row => {
+      const xIdx = xLabels.indexOf(row[0]);
+      const yIdx = yLabels.indexOf(row[1]);
+      if (xIdx !== -1 && yIdx !== -1) {
+        matrix[xIdx][yIdx]++;
+      }
+    });
+
+    // Marginals
+    const rowTotals = matrix.map(row => row.reduce((a, b) => a + b, 0));
+    const colTotals = Array(yLabels.length).fill(0);
+    matrix.forEach(row => {
+      row.forEach((val, c) => colTotals[c] += val);
+    });
+    const grandTotal = rowTotals.reduce((a, b) => a + b, 0);
+
+    // Expected Frequencies & Chi-Square
+    const expected = Array(xLabels.length).fill(null).map(() => Array(yLabels.length).fill(0));
+    let chiSquare = 0;
+
+    for (let r = 0; r < xLabels.length; r++) {
+      for (let c = 0; c < yLabels.length; c++) {
+        const exp = (rowTotals[r] * colTotals[c]) / grandTotal;
+        expected[r][c] = exp;
+        if (exp > 0) {
+          chiSquare += Math.pow(matrix[r][c] - exp, 2) / exp;
+        }
+      }
+    }
+
+    const df = (xLabels.length - 1) * (yLabels.length - 1);
+    const pValue = getChiSquarePValue(chiSquare, df);
+
+    return {
+      headers,
+      xLabels,
+      yLabels,
+      matrix,
+      rowTotals,
+      colTotals,
+      grandTotal,
+      expected,
+      chiSquare,
+      df,
+      pValue
+    };
+  }, [rawData]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-8 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <header className="text-center mb-10">
+          <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">Statistical Independence</h1>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            Explore bivariate data relationships using contingency tables and Chi-Square tests.
+          </p>
+        </header>
+
+        {/* Theoretical Background */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-indigo-600 px-6 py-4 flex items-center gap-3">
+            <Info className="text-white w-6 h-6" />
+            <h2 className="text-xl md:text-2xl font-semibold text-white">Theoretical Background</h2>
+          </div>
+          <div className="p-6 md:p-8 space-y-6 text-gray-700 leading-relaxed text-sm md:text-base">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Concept of Independence</h3>
+                <p>
+                  In probability, two random variables X and Y are <strong>statistically independent</strong> if the occurrence of one does not affect the probability of the other. Mathematically:
+                </p>
+                <div className="bg-gray-100 p-4 rounded-lg my-3 font-mono text-center text-indigo-700 font-semibold shadow-inner">
+                  P(X ∩ Y) = P(X) × P(Y)
+                </div>
+                <p>
+                  In the context of frequency data, this implies that the conditional distributions of one variable are identical across all categories of the other variable.
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Chi-Square Test (χ²)</h3>
+                <p>
+                  To test for independence, we compare <strong>Observed frequencies (O)</strong> with the <strong>Expected frequencies (E)</strong> calculated assuming independence.
+                </p>
+                <div className="bg-gray-100 p-4 rounded-lg my-3 font-mono text-center text-indigo-700 font-semibold shadow-inner">
+                  χ² = Σ [ (O - E)² / E ]
+                </div>
+                <p>
+                  Large χ² values indicate a significant deviation from independence. The test uses degrees of freedom: <code>df = (Rows - 1) × (Cols - 1)</code>.
+                </p>
+              </div>
+            </div>
+
+            <hr className="border-gray-200" />
+
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-r-lg">
+              <h3 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> Association vs. Causality
+              </h3>
+              <p className="text-blue-800">
+                A statistically significant Chi-Square test only proves <strong>association</strong> (the variables are dependent), it does <em>not</em> imply <strong>causation</strong>. 
+                "Correlation does not imply causation." The observed relationship might be due to a third, unmeasured factor known as a <em>confounding variable</em>. 
+                Establishing causality requires controlled experiments and rigorous study designs, not just statistical tests on observational data.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Interactive Calculator */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-emerald-600 px-6 py-4 flex items-center gap-3">
+            <Calculator className="text-white w-6 h-6" />
+            <h2 className="text-xl md:text-2xl font-semibold text-white">Interactive Bivariate Calculator</h2>
+          </div>
+          
+          <div className="p-6 md:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              
+              {/* Input Area */}
+              <div className="lg:col-span-1 space-y-4">
+                <div className="flex justify-between items-center">
+                  <label className="font-semibold text-gray-800 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-600"/> Data Input (CSV format)
+                  </label>
+                  <button 
+                    onClick={loadSampleData}
+                    className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-1 px-3 rounded-full transition-colors font-medium"
+                  >
+                    Load Sample Data
+                  </button>
+                </div>
+                <textarea
+                  className="w-full h-64 p-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none font-mono text-sm resize-none shadow-inner"
+                  placeholder="Paste your 2-column CSV data here...&#10;HeaderX,HeaderY&#10;Cat1,TypeA&#10;Cat1,TypeB&#10;Cat2,TypeA"
+                  value={rawData}
+                  onChange={(e) => setRawData(e.target.value)}
+                />
+                <p className="text-xs text-gray-500">
+                  Ensure data has two columns separated by a comma. The first row should contain headers.
+                </p>
+              </div>
+
+              {/* Results Area */}
+              <div className="lg:col-span-2 space-y-8">
+                
+                {!analysis ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 min-h-[300px] border-2 border-dashed border-gray-200 rounded-xl">
+                    <TableIcon className="w-12 h-12 mb-3 opacity-50" />
+                    <p>Enter valid bivariate data to generate the analysis.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Contingency Table */}
+                    <div className="overflow-x-auto">
+                      <div className="flex justify-between items-end mb-3">
+                        <h3 className="text-lg font-bold text-gray-800">Contingency Table (Observed)</h3>
+                        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                          <button onClick={() => setCondMode('none')} className={`text-xs px-3 py-1 rounded-md transition-all ${condMode === 'none' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-700'}`}>Counts</button>
+                          <button onClick={() => setCondMode('row')} className={`text-xs px-3 py-1 rounded-md transition-all ${condMode === 'row' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-700'}`}>Row %</button>
+                          <button onClick={() => setCondMode('col')} className={`text-xs px-3 py-1 rounded-md transition-all ${condMode === 'col' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-700'}`}>Col %</button>
+                        </div>
+                      </div>
+                      
+                      <table className="min-w-full border-collapse bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-600 border-r">{analysis.headers[0]} \ {analysis.headers[1]}</th>
+                            {analysis.yLabels.map(label => (
+                              <th key={label} className="px-4 py-3 text-center font-semibold text-gray-600 border-r">{label}</th>
+                            ))}
+                            <th className="px-4 py-3 text-center font-bold text-gray-800 bg-gray-100">Row Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analysis.xLabels.map((xLabel, rIndex) => (
+                            <tr key={xLabel} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-4 py-3 font-medium text-gray-700 border-r">{xLabel}</td>
+                              {analysis.yLabels.map((_, cIndex) => {
+                                const val = analysis.matrix[rIndex][cIndex];
+                                let displayVal = val;
+                                if (condMode === 'row') displayVal = ((val / analysis.rowTotals[rIndex]) * 100).toFixed(1) + '%';
+                                if (condMode === 'col') displayVal = ((val / analysis.colTotals[cIndex]) * 100).toFixed(1) + '%';
+                                
+                                return (
+                                  <td key={cIndex} className="px-4 py-3 text-center border-r text-gray-600">
+                                    {displayVal}
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-3 text-center font-semibold text-gray-800 bg-gray-100">
+                                {condMode === 'row' ? '100%' : analysis.rowTotals[rIndex]}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-gray-100 border-t-2 border-gray-200">
+                          <tr>
+                            <td className="px-4 py-3 font-bold text-gray-800 border-r">Column Total</td>
+                            {analysis.colTotals.map((tot, cIndex) => (
+                              <td key={cIndex} className="px-4 py-3 text-center font-semibold text-gray-800 border-r">
+                                {condMode === 'col' ? '100%' : tot}
+                              </td>
+                            ))}
+                            <td className="px-4 py-3 text-center font-bold text-emerald-700 bg-emerald-100">
+                              {analysis.grandTotal} (N)
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    {/* Expected Table & Stats */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      
+                      <div className="overflow-x-auto">
+                        <h3 className="text-sm font-bold text-gray-800 mb-2">Expected Frequencies</h3>
+                        <table className="min-w-full border-collapse bg-white border border-gray-200 rounded-lg text-xs">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-2 py-2 text-left text-gray-500 border-b border-r">X \ Y</th>
+                              {analysis.yLabels.map(label => (
+                                <th key={label} className="px-2 py-2 text-center text-gray-500 border-b">{label}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {analysis.xLabels.map((xLabel, rIndex) => (
+                              <tr key={xLabel} className="border-b last:border-b-0">
+                                <td className="px-2 py-2 font-medium text-gray-600 border-r bg-gray-50">{xLabel}</td>
+                                {analysis.yLabels.map((_, cIndex) => (
+                                  <td key={cIndex} className="px-2 py-2 text-center text-gray-500">
+                                    {analysis.expected[rIndex][cIndex].toFixed(2)}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 shadow-sm flex flex-col justify-center">
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Chi-Square Test Results</h3>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-center">
+                            <div className="text-xs text-gray-500 mb-1">Statistic (χ²)</div>
+                            <div className="text-xl font-bold text-gray-800">{analysis.chiSquare.toFixed(4)}</div>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-center">
+                            <div className="text-xs text-gray-500 mb-1">Degrees of Freedom</div>
+                            <div className="text-xl font-bold text-gray-800">{analysis.df}</div>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-center col-span-2">
+                            <div className="text-xs text-gray-500 mb-1">P-Value</div>
+                            <div className={`text-2xl font-bold ${analysis.pValue < 0.05 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {analysis.pValue < 0.0001 ? '< 0.0001' : analysis.pValue.toFixed(4)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {analysis.df > 0 ? (
+                           <div className={`p-4 rounded-lg flex gap-3 ${analysis.pValue < 0.05 ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                              <p className="text-sm">
+                                <strong>Conclusion:</strong> With a p-value of {analysis.pValue < 0.0001 ? '<0.0001' : analysis.pValue.toFixed(4)} (α = 0.05), we 
+                                {analysis.pValue < 0.05 
+                                  ? ' reject the null hypothesis. There is a statistically significant association between the two variables.' 
+                                  : ' fail to reject the null hypothesis. There is not enough evidence to claim an association; the variables appear independent.'}
+                              </p>
+                           </div>
+                        ) : (
+                          <div className="p-4 rounded-lg bg-orange-50 text-orange-800 border border-orange-200 text-sm text-center">
+                             Degrees of freedom is 0. A valid Chi-Square test requires at least a 2x2 contingency table.
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  );
+}
