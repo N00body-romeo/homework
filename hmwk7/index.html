@@ -1,0 +1,3412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Probability Convergence &amp; Bayesian Statistical Inference</title>
+  <style>
+    /* ==========================================================================
+       1. DESIGN TOKENS & ACADEMIC TYPOGRAPHY SYSTEM
+       ========================================================================== */
+    :root {
+      --bg-paper: #f8fafc;
+      --bg-paper-alt: #f1f5f9;
+      --surface-card: #ffffff;
+      --ink-primary: #0f172a;
+      --ink-secondary: #334155;
+      --ink-muted: #64748b;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+
+      /* Semantic Academic Palette */
+      --indigo: #2563eb;
+      --indigo-dark: #1d4ed8;
+      --indigo-soft: #eff6ff;
+      --indigo-border: #bfdbfe;
+
+      --emerald: #059669;
+      --emerald-dark: #047857;
+      --emerald-soft: #ecfdf5;
+      --emerald-border: #a7f3d0;
+
+      --amber: #d97706;
+      --amber-dark: #b45309;
+      --amber-soft: #fffbeb;
+      --amber-border: #fde68a;
+
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+      --rose-border: #fecdd3;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --shadow-lg: 0 12px 28px -6px rgba(15, 23, 42, 0.12), 0 4px 10px -4px rgba(15, 23, 42, 0.06);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-paper);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Mathematical Typography Helpers */
+    .math {
+      font-family: var(--font-serif);
+      font-style: italic;
+      letter-spacing: 0.01em;
+    }
+    .math-rm {
+      font-family: var(--font-serif);
+      font-style: normal;
+    }
+    .math-bb {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-style: normal;
+    }
+    .eq-block {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-left: 3.5px solid var(--indigo);
+      border-radius: var(--radius-sm);
+      padding: 0.95rem 1.25rem;
+      margin: 1rem 0;
+      font-family: var(--font-serif);
+      font-size: 1.06rem;
+      color: var(--ink-primary);
+      overflow-x: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .eq-block.emerald-accent {
+      border-left-color: var(--emerald);
+    }
+    .eq-block.amber-accent {
+      border-left-color: var(--amber);
+    }
+    .eq-label {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      white-space: nowrap;
+      font-style: normal;
+    }
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 0.22em;
+      font-size: 0.92em;
+      line-height: 1.15;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 0.25em 0.12em;
+    }
+    .frac > span:last-child {
+      padding: 0.12em 0.25em 0;
+    }
+    sub, sup {
+      font-size: 0.74em;
+      line-height: 0;
+    }
+
+    /* ==========================================================================
+       2. STICKY TOP NAVIGATION BAR
+       ========================================================================== */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-inner {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      text-decoration: none;
+      color: var(--ink-primary);
+    }
+
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--indigo), #1e40af);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1.2;
+      color: var(--ink-primary);
+    }
+    .brand-sub {
+      font-size: 0.74rem;
+      color: var(--ink-muted);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .nav-pill {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.48rem 0.85rem;
+      border-radius: 999px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .nav-pill:hover {
+      background: var(--bg-paper-alt);
+      color: var(--ink-primary);
+    }
+
+    .nav-pill.active-m1 {
+      background: var(--indigo-soft);
+      color: var(--indigo-dark);
+      border-color: var(--indigo-border);
+    }
+
+    .nav-pill.active-m2 {
+      background: var(--emerald-soft);
+      color: var(--emerald-dark);
+      border-color: var(--emerald-border);
+    }
+
+    .btn-formula {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-card);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.48rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.18s ease;
+    }
+
+    .btn-formula:hover {
+      border-color: var(--indigo);
+      color: var(--indigo);
+      background: var(--indigo-soft);
+    }
+
+    /* ==========================================================================
+       3. HERO HEADER & MAIN CONTAINER
+       ========================================================================== */
+    .container {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 1.75rem 1.25rem 4rem;
+    }
+
+    .hero-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2rem 2.25rem;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 2.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--indigo) 0%, var(--emerald) 55%, var(--amber) 100%);
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--indigo);
+      background: var(--indigo-soft);
+      border: 1px solid var(--indigo-border);
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 0.85rem;
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.65rem, 3vw, 2.35rem);
+      line-height: 1.2;
+      margin: 0 0 0.75rem;
+      color: var(--ink-primary);
+    }
+
+    .hero-lead {
+      font-size: 1.02rem;
+      color: var(--ink-secondary);
+      max-width: 860px;
+      margin: 0 0 1.35rem;
+    }
+
+    .hero-toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1rem;
+    }
+
+    .toc-box {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.15rem;
+      background: var(--bg-paper);
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      display: block;
+    }
+
+    .toc-box:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--indigo-border);
+    }
+
+    .toc-box.m2:hover {
+      border-color: var(--emerald-border);
+    }
+
+    .toc-tag {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+
+    /* ==========================================================================
+       4. MODULE HEADERS, SECTION CARDS & CALLOUTS
+       ========================================================================== */
+    .module-banner {
+      margin: 2.75rem 0 1.5rem;
+      padding: 1.35rem 1.65rem;
+      border-radius: var(--radius-lg);
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .module-banner.m1 {
+      border-left: 6px solid var(--indigo);
+    }
+
+    .module-banner.m2 {
+      border-left: 6px solid var(--emerald);
+    }
+
+    .module-num {
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .module-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+      margin: 0;
+      color: var(--ink-primary);
+    }
+
+    .section-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.65rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .section-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: 1.32rem;
+      margin: 0;
+      color: var(--ink-primary);
+    }
+
+    .section-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.22rem 0.65rem;
+      border-radius: 999px;
+      background: var(--bg-paper-alt);
+      color: var(--ink-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    h3 {
+      font-size: 1.06rem;
+      font-weight: 700;
+      color: var(--ink-primary);
+      margin: 1.35rem 0 0.55rem;
+    }
+
+    p {
+      margin: 0 0 0.9rem;
+      color: var(--ink-secondary);
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 1.15rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.1rem;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+
+    /* Definition Cards */
+    .def-card {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.15rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .def-card.indigo-top { border-top: 3.5px solid var(--indigo); }
+    .def-card.emerald-top { border-top: 3.5px solid var(--emerald); }
+    .def-card.amber-top { border-top: 3.5px solid var(--amber); }
+    .def-card.slate-top { border-top: 3.5px solid #475569; }
+
+    .def-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--ink-primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .def-symbol {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 0.92rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 6px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--indigo-dark);
+      white-space: nowrap;
+    }
+
+    .def-formula {
+      font-family: var(--font-serif);
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.55rem 0.75rem;
+      margin: 0.6rem 0;
+      font-size: 0.96rem;
+      color: var(--ink-primary);
+      overflow-x: auto;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin: 1.1rem 0;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-paper);
+    }
+
+    .callout.indigo {
+      background: var(--indigo-soft);
+      border-color: var(--indigo-border);
+    }
+
+    .callout.emerald {
+      background: var(--emerald-soft);
+      border-color: var(--emerald-border);
+    }
+
+    .callout.amber {
+      background: var(--amber-soft);
+      border-color: var(--amber-border);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.94rem;
+      margin-bottom: 0.35rem;
+      color: var(--ink-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    /* Academic Table */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin: 1.15rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+      background: var(--surface-card);
+    }
+
+    th {
+      background: var(--bg-paper-alt);
+      color: var(--ink-primary);
+      font-weight: 700;
+      padding: 0.75rem 0.95rem;
+      border-bottom: 1px solid var(--border-strong);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.75rem 0.95rem;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--ink-secondary);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ==========================================================================
+       5. INTERACTIVE HIERARCHY & COUNTEREXAMPLE EXPLORER
+       ========================================================================== */
+    .hierarchy-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 1.35rem;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .hierarchy-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .svg-stage {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .hierarchy-svg {
+      width: 100%;
+      height: auto;
+      max-height: 360px;
+      display: block;
+    }
+
+    .arrow-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.85rem;
+    }
+
+    .ce-btn {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-card);
+      color: var(--ink-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.45rem 0.8rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .ce-btn:hover {
+      border-color: var(--amber);
+      color: var(--amber-dark);
+      background: var(--amber-soft);
+    }
+
+    .ce-btn.active {
+      background: var(--amber);
+      color: #ffffff;
+      border-color: var(--amber-dark);
+      box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+    }
+
+    .ce-btn.proof-active {
+      background: var(--indigo);
+      color: #ffffff;
+      border-color: var(--indigo-dark);
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+
+    .ce-panel {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .typewriter-strip {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 3px;
+      margin: 0.75rem 0;
+      padding: 0.5rem;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+    }
+
+    .tw-cell {
+      height: 22px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      transition: background-color 0.2s ease;
+    }
+
+    .tw-cell.on {
+      background: var(--amber);
+    }
+
+    /* ==========================================================================
+       6. INTERACTIVE SIMULATION LABORATORIES (CONTROLS, TABS, CANVASES)
+       ========================================================================== */
+    .lab-card {
+      background: var(--surface-card);
+      border: 1px solid var(--indigo-border);
+      border-radius: var(--radius-lg);
+      padding: 1.65rem 1.85rem;
+      margin-bottom: 1.85rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .lab-card.emerald-lab {
+      border-color: var(--emerald-border);
+    }
+
+    .lab-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1.15rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .lab-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .lab-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--indigo);
+      box-shadow: 0 0 0 4px var(--indigo-soft);
+      flex-shrink: 0;
+    }
+
+    .lab-dot.emerald {
+      background: var(--emerald);
+      box-shadow: 0 0 0 4px var(--emerald-soft);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.05rem 1.15rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--ink-secondary);
+    }
+
+    .control-val {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--indigo-dark);
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      padding: 0.1rem 0.45rem;
+      border-radius: 5px;
+    }
+
+    .control-val.emerald {
+      color: var(--emerald-dark);
+    }
+
+    select, input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    select {
+      padding: 0.48rem 0.65rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface-card);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      font-size: 0.86rem;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      accent-color: var(--indigo);
+      height: 6px;
+    }
+
+    .emerald-range {
+      accent-color: var(--emerald) !important;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .btn-primary {
+      appearance: none;
+      border: none;
+      background: var(--indigo);
+      color: #ffffff;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.55rem 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.16s ease, transform 0.1s ease;
+      box-shadow: 0 2px 5px rgba(37, 99, 235, 0.24);
+    }
+
+    .btn-primary:hover {
+      background: var(--indigo-dark);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    .btn-emerald {
+      appearance: none;
+      border: none;
+      background: var(--emerald);
+      color: #ffffff;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.55rem 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.16s ease, transform 0.1s ease;
+      box-shadow: 0 2px 5px rgba(5, 150, 105, 0.24);
+    }
+
+    .btn-emerald:hover {
+      background: var(--emerald-dark);
+    }
+
+    .btn-secondary {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-card);
+      color: var(--ink-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.48rem 0.85rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-paper-alt);
+      color: var(--ink-primary);
+      border-color: #94a3b8;
+    }
+
+    .dual-canvas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.15rem;
+    }
+
+    @media (max-width: 860px) {
+      .dual-canvas-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-box {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .canvas-caption {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ink-primary);
+      margin-bottom: 0.55rem;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .canvas-wrap.tall {
+      height: 330px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Telemetry Readout Strip */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .stat-tile {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 0.85rem;
+    }
+
+    .stat-label {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink-primary);
+      margin-top: 0.15rem;
+    }
+
+    /* Lab Sub-Tabs */
+    .tab-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.15rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.75rem;
+    }
+
+    .tab-btn {
+      appearance: none;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-paper);
+      color: var(--ink-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.86rem;
+      font-weight: 600;
+      padding: 0.52rem 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--emerald);
+      color: #ffffff;
+      border-color: var(--emerald-dark);
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.22);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* Weight Bar */
+    .weight-bar-container {
+      margin-top: 0.85rem;
+      background: var(--bg-paper);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.95rem;
+    }
+
+    .weight-bar-track {
+      height: 12px;
+      width: 100%;
+      background: #cbd5e1;
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+      margin: 0.45rem 0;
+    }
+
+    .weight-bar-data {
+      height: 100%;
+      background: var(--emerald);
+      transition: width 0.25s ease;
+    }
+
+    .weight-bar-prior {
+      height: 100%;
+      background: #64748b;
+      transition: width 0.25s ease;
+    }
+
+    /* ==========================================================================
+       7. QUICK FORMULA REFERENCE DRAWER & TOAST
+       ========================================================================== */
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(3px);
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+    }
+
+    .drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .formula-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(480px, 94vw);
+      background: var(--surface-card);
+      border-left: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-lg);
+      z-index: 70;
+      transform: translateX(100%);
+      transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .formula-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-head {
+      padding: 1.15rem 1.35rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-paper);
+    }
+
+    .drawer-body {
+      padding: 1.25rem 1.35rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .formula-item {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.85rem;
+      background: var(--bg-paper);
+    }
+
+    .formula-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .copy-chip {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-card);
+      color: var(--ink-secondary);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .copy-chip:hover {
+      border-color: var(--indigo);
+      color: var(--indigo);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      background: var(--ink-primary);
+      color: #ffffff;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      z-index: 90;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 1.75rem 1.25rem;
+      text-align: center;
+      color: var(--ink-muted);
+      font-size: 0.85rem;
+      background: var(--surface-card);
+    }
+
+    @media (max-width: 640px) {
+      .hero-card, .section-card, .lab-card {
+        padding: 1.25rem 1.15rem;
+      }
+      .module-banner {
+        padding: 1.1rem 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       STICKY TOP NAVIGATION BAR
+       ======================================================================== -->
+  <header class="top-nav">
+    <div class="nav-inner">
+      <a href="#top" class="brand">
+        <span class="brand-badge">ℙ</span>
+        <span class="brand-text">
+          <span class="brand-title">Probability &amp; Bayesian Inference</span>
+          <span class="brand-sub">Asymptotic Theory &amp; Interactive Statistical Lab</span>
+        </span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary sections">
+        <a href="#module-1" id="nav-m1" class="nav-pill active-m1">Module 1: Convergence &amp; √n</a>
+        <a href="#lab-1" class="nav-pill">LLN/CLT Lab</a>
+        <a href="#module-2" id="nav-m2" class="nav-pill">Module 2: Bayes' Theorem</a>
+        <a href="#lab-2" class="nav-pill">Bayesian Lab</a>
+        <button type="button" id="open-drawer-btn" class="btn-formula" aria-label="Open formula reference">
+          <span>∑</span> Formula Reference
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN MONOGRAPH CONTENT
+       ======================================================================== -->
+  <main id="top" class="container">
+
+    <!-- HERO OVERVIEW -->
+    <section class="hero-card">
+      <span class="hero-kicker">Interactive Statistical Monograph &amp; Simulation Suite</span>
+      <h1 class="hero-title">Modes of Convergence in Probability Theory &amp; Bayesian Statistical Inference</h1>
+      <p class="hero-lead">
+        A rigorous, self-contained mathematical exposition and interactive laboratory connecting asymptotic limit theorems
+        (Almost Sure, <span class="math">L</span><sup>2</sup>, Probability, and Distribution convergence; the Law of Large Numbers; the Central Limit Theorem; and the <span class="math">√n</span> variance scaling law)
+        with inverse probability, Bayes' Theorem, and sequential posterior updating.
+      </p>
+
+      <div class="hero-toc">
+        <a href="#module-1" class="toc-box">
+          <span class="toc-tag" style="color: var(--indigo);">Module I · Asymptotic Probability</span>
+          <strong>Modes of Convergence, LLN, CLT &amp; the √n Law</strong>
+          <p style="font-size: 0.85rem; margin: 0.35rem 0 0;">
+            Definitions, implication hierarchy, classic counterexamples (Typewriter sequence), variance additivity under independence, and interactive Monte Carlo trajectory simulator.
+          </p>
+        </a>
+        <a href="#module-2" class="toc-box m2">
+          <span class="toc-tag" style="color: var(--emerald);">Module II · Inverse Inference</span>
+          <strong>Conditional Probability, Bayes' Theorem &amp; Posterior Updating</strong>
+          <p style="font-size: 0.85rem; margin: 0.35rem 0 0;">
+            Prior, likelihood, and posterior triad; sequential coherence; conjugate Beta–Binomial and Normal–Normal models; base-rate fallacies; and live Bayesian updating studio.
+          </p>
+        </a>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         MODULE 1: MODES OF CONVERGENCE IN PROBABILITY THEORY
+         ====================================================================== -->
+    <div id="module-1" class="module-banner m1">
+      <div>
+        <span class="module-num" style="color: var(--indigo);">Module I · Asymptotic Limit Theory</span>
+        <h2 class="module-title">Modes of Convergence, LLN, CLT &amp; the <span class="math">√n</span> Scaling Law</h2>
+      </div>
+      <span class="section-badge">4 Convergence Modes · Counterexamples · Live Simulator</span>
+    </div>
+
+    <!-- 1.1 DEFINITIONS & COMPARISON TABLE -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">1.1 The Four Principal Modes of Stochastic Convergence</h2>
+        <span class="section-badge">Definitions on (Ω, ℱ, ℙ)</span>
+      </div>
+
+      <p>
+        Unlike deterministic sequences of real numbers, a sequence of random variables <span class="math">X<sub>1</sub>, X<sub>2</sub>, …, X<sub>n</sub></span> defined on a probability space
+        <span class="math">(Ω, ℱ, ℙ)</span> can approach a limiting random variable <span class="math">X</span> in several distinct topological senses. Each mode imposes a different requirement on sample paths, moments, or cumulative distribution functions (CDFs).
+      </p>
+
+      <div class="grid-2">
+        <!-- Almost Sure -->
+        <div class="def-card indigo-top">
+          <div>
+            <div class="def-title">
+              <span>1. Almost Sure Convergence (a.s.)</span>
+              <span class="def-symbol">X<sub>n</sub> →<sup>a.s.</sup> X</span>
+            </div>
+            <div class="def-formula">
+              <span class="math-bb">ℙ</span>({<span class="math">ω ∈ Ω</span> : lim<sub><span class="math">n</span>→∞</sub> <span class="math">X<sub>n</sub></span>(<span class="math">ω</span>) = <span class="math">X</span>(<span class="math">ω</span>)}) = 1
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+              <strong>Pathwise Intuition:</strong> For almost every individual realization <span class="math">ω</span>, the deterministic sequence of numbers <span class="math">X<sub>n</sub>(ω)</span> converges to <span class="math">X(ω)</span>. Exceptional trajectories where convergence fails have total probability zero.
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            <strong>Tail Criterion:</strong> ∀<span class="math">ε</span> &gt; 0, lim<sub><span class="math">n</span>→∞</sub> <span class="math-bb">ℙ</span>(⋃<sub><span class="math">k≥n</span></sub> {|X<sub>k</sub> − X| &gt; ε}) = 0.
+          </div>
+        </div>
+
+        <!-- Mean-Square (L2) -->
+        <div class="def-card emerald-top">
+          <div>
+            <div class="def-title">
+              <span>2. Mean-Square Convergence (<span class="math">L</span><sup>2</sup>)</span>
+              <span class="def-symbol">X<sub>n</sub> →<sup>L²</sup> X</span>
+            </div>
+            <div class="def-formula">
+              lim<sub><span class="math">n</span>→∞</sub> <span class="math-bb">𝔼</span>[|<span class="math">X<sub>n</sub></span> − <span class="math">X</span>|<sup>2</sup>] = 0
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+              <strong>Moment / MSE Intuition:</strong> Requires finite second moments (<span class="math">X<sub>n</sub>, X ∈ L<sup>2</sup>(Ω)</span>). When <span class="math">X = θ</span> is a constant parameter, <span class="math-bb">𝔼</span>[(<span class="math">X<sub>n</sub> − θ</span>)<sup>2</sup>] = Bias(<span class="math">X<sub>n</sub></span>)<sup>2</sup> + Var(<span class="math">X<sub>n</sub></span>) → 0, simultaneously forcing bias and variance to vanish.
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            <strong>Hilbert Space View:</strong> Convergence in norm ‖<span class="math">X<sub>n</sub> − X</span>‖<sub>2</sub> → 0.
+          </div>
+        </div>
+
+        <!-- Convergence in Probability -->
+        <div class="def-card amber-top">
+          <div>
+            <div class="def-title">
+              <span>3. Convergence in Probability</span>
+              <span class="def-symbol">X<sub>n</sub> →<sup>P</sup> X</span>
+            </div>
+            <div class="def-formula">
+              ∀<span class="math">ε</span> &gt; 0, &nbsp; lim<sub><span class="math">n</span>→∞</sub> <span class="math-bb">ℙ</span>(|<span class="math">X<sub>n</sub></span> − <span class="math">X</span>| &gt; <span class="math">ε</span>) = 0
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+              <strong>Cross-Sectional Intuition:</strong> At any sufficiently large fixed index <span class="math">n</span>, the probability that <span class="math">X<sub>n</sub></span> deviates from <span class="math">X</span> by more than <span class="math">ε</span> is arbitrarily small—even if individual paths suffer rare spikes infinitely often.
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            <strong>Subsequence Property:</strong> <span class="math">X<sub>n</sub> →<sup>P</sup> X</span> iff every subsequence has a further a.s.-convergent subsequence.
+          </div>
+        </div>
+
+        <!-- Convergence in Distribution -->
+        <div class="def-card slate-top">
+          <div>
+            <div class="def-title">
+              <span>4. Convergence in Distribution</span>
+              <span class="def-symbol">X<sub>n</sub> →<sup>d</sup> X</span>
+            </div>
+            <div class="def-formula">
+              lim<sub><span class="math">n</span>→∞</sub> <span class="math">F<sub>X<sub>n</sub></sub></span>(<span class="math">x</span>) = <span class="math">F<sub>X</sub></span>(<span class="math">x</span>) &nbsp; ∀<span class="math">x ∈ C(F<sub>X</sub>)</span>
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+              <strong>Weak / Law Intuition:</strong> The CDFs <span class="math">F<sub>X<sub>n</sub></sub></span> converge pointwise to <span class="math">F<sub>X</sub></span> at every continuity point <span class="math">x</span> of <span class="math">F<sub>X</sub></span>. Does not even require <span class="math">X<sub>n</sub></span> and <span class="math">X</span> to live on the same probability space!
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            <strong>Portmanteau Equivalence:</strong> <span class="math-bb">𝔼</span>[<span class="math">g(X<sub>n</sub>)</span>] → <span class="math-bb">𝔼</span>[<span class="math">g(X)</span>] for all bounded continuous <span class="math">g</span>.
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Notation</th>
+              <th>Common Space Required?</th>
+              <th>Moments Needed</th>
+              <th>Primary Statistical Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Almost Sure</strong></td>
+              <td><span class="math">X<sub>n</sub> →<sup>a.s.</sup> X</span></td>
+              <td>Yes (joint <span class="math">Ω</span>)</td>
+              <td>None (SLLN: <span class="math-bb">𝔼</span>|<span class="math">X<sub>1</sub></span>| &lt; ∞)</td>
+              <td>Strong consistency; Monte Carlo &amp; empirical process guarantees</td>
+            </tr>
+            <tr>
+              <td><strong>Mean-Square (<span class="math">L</span><sup>2</sup>)</strong></td>
+              <td><span class="math">X<sub>n</sub> →<sup>L²</sup> X</span></td>
+              <td>Yes (joint <span class="math">Ω</span>)</td>
+              <td>Finite 2nd moment (<span class="math-bb">𝔼</span>[<span class="math">X<sub>n</sub><sup>2</sup></span>] &lt; ∞)</td>
+              <td><span class="math">L</span><sup>2</sup> consistency; MSE = Bias<sup>2</sup> + Var → 0; Kalman &amp; Wiener filtering</td>
+            </tr>
+            <tr>
+              <td><strong>In Probability</strong></td>
+              <td><span class="math">X<sub>n</sub> →<sup>P</sup> X</span></td>
+              <td>Yes (joint <span class="math">Ω</span>)</td>
+              <td>None (WLLN: <span class="math-bb">𝔼</span>|<span class="math">X<sub>1</sub></span>| &lt; ∞)</td>
+              <td>Weak consistency of estimators (<span class="math">θ̂<sub>n</sub> →<sup>P</sup> θ</span>); Slutsky inputs</td>
+            </tr>
+            <tr>
+              <td><strong>In Distribution</strong></td>
+              <td><span class="math">X<sub>n</sub> →<sup>d</sup> X</span></td>
+              <td>No (only marginal laws)</td>
+              <td>None (CLT: 0 &lt; <span class="math">σ</span><sup>2</sup> &lt; ∞)</td>
+              <td>Asymptotic normality; confidence intervals; Wald/LR/Score tests</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- 1.2 INTERACTIVE IMPLICATION HIERARCHY & COUNTEREXAMPLE EXPLORER -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">1.2 Interactive Implication Hierarchy &amp; Counterexample Explorer</h2>
+        <span class="section-badge">Click Arrows or Counterexamples Below</span>
+      </div>
+
+      <p>
+        Both <strong>Almost Sure convergence</strong> and <strong>Mean-Square (<span class="math">L</span><sup>2</sup>) convergence</strong> strictly imply <strong>Convergence in Probability</strong>, which in turn implies <strong>Convergence in Distribution</strong>. However, <span class="math">L</span><sup>2</sup> and almost sure convergence do <em>not</em> imply one another, and all reverse implications fail without extra regularity conditions.
+      </p>
+
+      <div class="hierarchy-grid">
+        <!-- Left: Interactive SVG Hierarchy Diagram -->
+        <div class="svg-stage">
+          <svg class="hierarchy-svg" viewBox="0 0 540 310" role="img" aria-label="Convergence modes implication diagram">
+            <defs>
+              <marker id="arrow-solid" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="#2563eb" />
+              </marker>
+              <marker id="arrow-dashed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="#d97706" />
+              </marker>
+            </defs>
+
+            <!-- Node: L2 Convergence -->
+            <rect x="20" y="25" width="185" height="64" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="2" />
+            <text x="112" y="52" text-anchor="middle" font-weight="700" font-size="14" fill="#0f172a">Mean-Square (L²)</text>
+            <text x="112" y="73" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="#047857">E[|Xₙ − X|²] → 0</text>
+
+            <!-- Node: Almost Sure Convergence -->
+            <rect x="20" y="215" width="185" height="64" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2" />
+            <text x="112" y="242" text-anchor="middle" font-weight="700" font-size="14" fill="#0f172a">Almost Sure (a.s.)</text>
+            <text x="112" y="263" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="#1d4ed8">P(lim Xₙ = X) = 1</text>
+
+            <!-- Node: Convergence in Probability -->
+            <rect x="255" y="120" width="130" height="68" rx="12" fill="#fffbeb" stroke="#d97706" stroke-width="2" />
+            <text x="320" y="148" text-anchor="middle" font-weight="700" font-size="13.5" fill="#0f172a">In Probability</text>
+            <text x="320" y="169" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="#b45309">Xₙ →ᴾ X</text>
+
+            <!-- Node: Convergence in Distribution -->
+            <rect x="415" y="120" width="112" height="68" rx="12" fill="#f1f5f9" stroke="#475569" stroke-width="2" />
+            <text x="471" y="148" text-anchor="middle" font-weight="700" font-size="13" fill="#0f172a">In Distribution</text>
+            <text x="471" y="169" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="#334155">Xₙ →ᵈ X</text>
+
+            <!-- Solid Implication: L2 => P -->
+            <line x1="205" y1="68" x2="255" y2="128" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrow-solid)" />
+            <text x="242" y="88" font-size="11.5" font-weight="700" fill="#1d4ed8">Chebyshev</text>
+
+            <!-- Dashed Reverse: P =/=> L2 -->
+            <line x1="248" y1="142" x2="195" y2="88" stroke="#d97706" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow-dashed)" />
+            <text x="196" y="125" font-size="11" font-weight="700" fill="#b45309">⇏</text>
+
+            <!-- Solid Implication: a.s. => P -->
+            <line x1="205" y1="236" x2="255" y2="178" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrow-solid)" />
+            <text x="240" y="222" font-size="11.5" font-weight="700" fill="#1d4ed8">Fatou</text>
+
+            <!-- Dashed Reverse: P =/=> a.s. -->
+            <line x1="248" y1="164" x2="195" y2="218" stroke="#d97706" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow-dashed)" />
+            <text x="196" y="188" font-size="11" font-weight="700" fill="#b45309">⇏</text>
+
+            <!-- Vertical Bidirectional Non-Implication: L2 <=/=> a.s. -->
+            <line x1="112" y1="92" x2="112" y2="210" stroke="#d97706" stroke-width="2" stroke-dasharray="5,4" />
+            <rect x="64" y="138" width="96" height="24" rx="6" fill="#fffbeb" stroke="#fde68a" />
+            <text x="112" y="154" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309">L² ⇏ a.s. &amp; a.s. ⇏ L²</text>
+
+            <!-- Solid Implication: P => d -->
+            <line x1="385" y1="143" x2="413" y2="143" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrow-solid)" />
+
+            <!-- Dashed Reverse: d =/=> P -->
+            <line x1="413" y1="167" x2="387" y2="167" stroke="#d97706" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow-dashed)" />
+            <text x="400" y="185" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309">⇏</text>
+          </svg>
+
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 700; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+              Inspect Counterexamples &amp; Upgrade Theorems:
+            </div>
+            <div class="arrow-btn-group" id="ce-buttons">
+              <button type="button" class="ce-btn active" data-ce="p-not-as">P ⇏ a.s. (Typewriter)</button>
+              <button type="button" class="ce-btn" data-ce="as-not-l2">a.s. ⇏ L² (Spike)</button>
+              <button type="button" class="ce-btn" data-ce="d-not-p">d ⇏ P (Mirror)</button>
+              <button type="button" class="ce-btn" data-ce="upgrades">When Reverse Holds</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Counterexample Detail & Interactive Stepper -->
+        <div class="ce-panel" id="ce-detail-panel">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+    </article>
+
+    <!-- 1.3 ROLES IN LLN, CLT & STATISTICAL INFERENCE -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">1.3 Roles in the Law of Large Numbers, Central Limit Theorem &amp; Statistics</h2>
+        <span class="section-badge">Foundations of Asymptotic Inference</span>
+      </div>
+
+      <div class="grid-3">
+        <div class="def-card amber-top">
+          <div>
+            <div class="def-title">
+              <span>Weak Law of Large Numbers (WLLN)</span>
+              <span class="def-symbol">X̄<sub>n</sub> →<sup>P</sup> μ</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              For i.i.d. random variables with <span class="math-bb">𝔼</span>|<span class="math">X<sub>1</sub></span>| &lt; ∞ (Khinchin's WLLN) or finite variance <span class="math">σ</span><sup>2</sup> &lt; ∞ (Chebyshev's proof via <span class="math">L</span><sup>2</sup> convergence), the sample mean <span class="math">X̄<sub>n</sub></span> converges in probability to <span class="math">μ</span>.
+            </p>
+          </div>
+          <div style="font-size: 0.83rem; color: var(--ink-muted); border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
+            <strong>Statistical Role:</strong> Defines <em>weak consistency</em> of an estimator (<span class="math">θ̂<sub>n</sub> →<sup>P</sup> θ</span>), guaranteeing that large samples avoid large estimation errors with high probability.
+          </div>
+        </div>
+
+        <div class="def-card indigo-top">
+          <div>
+            <div class="def-title">
+              <span>Strong Law of Large Numbers (SLLN)</span>
+              <span class="def-symbol">X̄<sub>n</sub> →<sup>a.s.</sup> μ</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              Kolmogorov's SLLN proves that <span class="math-bb">ℙ</span>(lim<sub><span class="math">n</span>→∞</sub> <span class="math">X̄<sub>n</sub></span> = <span class="math">μ</span>) = 1 if and only if <span class="math-bb">𝔼</span>|<span class="math">X<sub>1</sub></span>| &lt; ∞. Along almost every infinite experimental run, the running average settles permanently at <span class="math">μ</span>.
+            </p>
+          </div>
+          <div style="font-size: 0.83rem; color: var(--ink-muted); border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
+            <strong>Statistical Role:</strong> Justifies the frequentist interpretation of probability as long-run relative frequency and guarantees convergence of Monte Carlo integration.
+          </div>
+        </div>
+
+        <div class="def-card emerald-top">
+          <div>
+            <div class="def-title">
+              <span>Central Limit Theorem (CLT)</span>
+              <span class="def-symbol">Z<sub>n</sub> →<sup>d</sup> 𝒩(0,1)</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              For i.i.d. variables with mean <span class="math">μ</span> and <span class="math">0 &lt; σ<sup>2</sup> &lt; ∞</span>, the standardized sum/mean satisfies
+              <span class="math">√n(X̄<sub>n</sub> − μ)/σ →<sup>d</sup> 𝒩(0, 1)</span> regardless of the shape of the parent distribution.
+            </p>
+          </div>
+          <div style="font-size: 0.83rem; color: var(--ink-muted); border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
+            <strong>Statistical Role:</strong> Quantifies <em>distributional uncertainty</em> at finite <span class="math">n</span>, enabling asymptotic confidence intervals, <span class="math">Z</span>-tests, and likelihood ratio asymptotics.
+          </div>
+        </div>
+      </div>
+
+      <h3>Key Bridging Theorems in Statistical Inference</h3>
+      <div class="grid-3">
+        <div class="callout">
+          <div class="callout-title">Continuous Mapping Theorem (CMT)</div>
+          <p style="font-size: 0.88rem; margin: 0;">
+            If <span class="math">g</span> is continuous at almost every point in the support of <span class="math">X</span>, then <span class="math">X<sub>n</sub> →<sup>a.s./P/d</sup> X</span> implies <span class="math">g(X<sub>n</sub>) →<sup>a.s./P/d</sup> g(X)</span>. Preserves consistency under smooth transformations (e.g., <span class="math">S<sub>n</sub><sup>2</sup> →<sup>P</sup> σ<sup>2</sup> ⇒ S<sub>n</sub> →<sup>P</sup> σ</span>).
+          </p>
+        </div>
+        <div class="callout">
+          <div class="callout-title">Slutsky's Theorem</div>
+          <p style="font-size: 0.88rem; margin: 0;">
+            If <span class="math">X<sub>n</sub> →<sup>d</sup> X</span> and <span class="math">Y<sub>n</sub> →<sup>P</sup> c</span> (a constant), then <span class="math">X<sub>n</sub> + Y<sub>n</sub> →<sup>d</sup> X + c</span> and <span class="math">X<sub>n</sub>Y<sub>n</sub> →<sup>d</sup> cX</span>. Enables plugging in sample SD <span class="math">S<sub>n</sub></span> for unknown <span class="math">σ</span>: <span class="math">√n(X̄<sub>n</sub> − μ)/S<sub>n</sub> →<sup>d</sup> 𝒩(0,1)</span>.
+          </p>
+        </div>
+        <div class="callout">
+          <div class="callout-title">The Delta Method</div>
+          <p style="font-size: 0.88rem; margin: 0;">
+            Via first-order Taylor expansion around <span class="math">μ</span>, if <span class="math">√n(X̄<sub>n</sub> − μ) →<sup>d</sup> 𝒩(0, σ<sup>2</sup>)</span> and <span class="math">g′(μ) ≠ 0</span>, then <span class="math">√n(g(X̄<sub>n</sub>) − g(μ)) →<sup>d</sup> 𝒩(0, [g′(μ)]<sup>2</sup>σ<sup>2</sup>)</span>.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 1.4 DEEP DIVE: WHY √n APPEARS IN CONVERGENCE THEOREMS -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">1.4 Why Does <span class="math">√n</span> Appear in Convergence Theorems?</h2>
+        <span class="section-badge">Additivity of Variance &amp; Independence</span>
+      </div>
+
+      <p>
+        The ubiquitous factor <span class="math">√n</span> (and its reciprocal <span class="math">1/√n</span>) is not an arbitrary convention—it is a direct algebraic consequence of the <strong>bilinearity of covariance</strong> and the <strong>additivity of variance under independence</strong>.
+      </p>
+
+      <h3>Step 1: Linear Growth of Variance for Sums of Independent Variables</h3>
+      <p>
+        Let <span class="math">X<sub>1</sub>, …, X<sub>n</sub></span> be random variables with common mean <span class="math">μ</span> and finite variance <span class="math">σ<sup>2</sup></span>. The variance of their partial sum <span class="math">S<sub>n</sub> = ∑<sub>i=1</sub><sup>n</sup> X<sub>i</sub></span> is:
+      </p>
+      <div class="eq-block">
+        <span>
+          Var(<span class="math">S<sub>n</sub></span>) = <span class="sum">∑<sub>i=1</sub><sup>n</sup></span> Var(<span class="math">X<sub>i</sub></span>) + 2 <span class="sum">∑<sub>1≤i&lt;j≤n</sub></span> Cov(<span class="math">X<sub>i</sub>, X<sub>j</sub></span>)
+        </span>
+        <span class="eq-label">(1) General Variance Identity</span>
+      </div>
+      <p>
+        When <span class="math">X<sub>1</sub>, …, X<sub>n</sub></span> are <strong>independent</strong> (or merely pairwise uncorrelated), every cross-covariance vanishes: <span class="math">Cov(X<sub>i</sub>, X<sub>j</sub>) = 0</span> for all <span class="math">i ≠ j</span>. Consequently, <span class="math">n</span> variance terms add linearly:
+      </p>
+      <div class="eq-block emerald-accent">
+        <span>
+          Var(<span class="math">S<sub>n</sub></span>) = <span class="math">nσ<sup>2</sup></span> &nbsp;⟹&nbsp; SD(<span class="math">S<sub>n</sub></span>) = <span class="math">√n · σ</span>,
+          &qquad
+          Var(<span class="math">X̄<sub>n</sub></span>) = Var<span class="math-rm">(</span><span class="frac"><span>1</span><span>n</span></span><span class="math">S<sub>n</sub></span><span class="math-rm">)</span> = <span class="frac"><span>nσ<sup>2</sup></span><span>n<sup>2</sup></span></span> = <span class="frac"><span>σ<sup>2</sup></span><span>n</span></span> &nbsp;⟹&nbsp; SD(<span class="math">X̄<sub>n</sub></span>) = <span class="frac"><span>σ</span><span>√n</span></span>
+        </span>
+        <span class="eq-label">(2) √n Standard Error</span>
+      </div>
+
+      <h3>Step 2: Critical Scaling Balance of <span class="math">n<sup>α</sup>(X̄<sub>n</sub> − μ)</span></h3>
+      <p>
+        Consider rescaling the centered sample mean <span class="math">X̄<sub>n</sub> − μ</span> by a power <span class="math">n<sup>α</sup></span>. Its variance is:
+      </p>
+      <div class="eq-block">
+        <span>
+          Var<span class="math-rm">(</span><span class="math">n<sup>α</sup>(X̄<sub>n</sub> − μ)</span><span class="math-rm">)</span> = <span class="math">n<sup>2α</sup></span> · <span class="frac"><span>σ<sup>2</sup></span><span>n</span></span> = <span class="math">n<sup>2α − 1</sup> σ<sup>2</sup></span>
+        </span>
+        <span class="eq-label">(3) Scaling Exponent Law</span>
+      </div>
+
+      <div class="grid-3">
+        <div class="callout">
+          <div class="callout-title">Under-Scaled: <span class="math">α &lt; 1/2</span> (e.g., <span class="math">α = 0</span>)</div>
+          <p style="font-size: 0.88rem; margin: 0;">
+            Here <span class="math">2α − 1 &lt; 0</span>, so <span class="math">Var(n<sup>α</sup>(X̄<sub>n</sub> − μ)) → 0</span>. The distribution collapses completely into a degenerate point mass <span class="math">δ<sub>0</sub></span> at zero (the Law of Large Numbers regime), erasing all information about fluctuation shape.
+          </p>
+        </div>
+        <div class="callout emerald">
+          <div class="callout-title">Critical Balance: <span class="math">α = 1/2</span> (<span class="math">√n</span> Scale)</div>
+          <p style="font-size: 0.88rem; margin: 0;">
+            Here <span class="math">2(1/2) − 1 = 0</span>, so <span class="math">Var(√n(X̄<sub>n</sub> − μ)) = n<sup>0</sup>σ<sup>2</sup> = σ<sup>2</sup></span> for <em>every</em> <span class="math">n</span>! Multiplying by <span class="math">√n</span> exactly offsets the <span class="math">1/√n</span> decay of the standard error, stabilizing the variance at <span class="math">σ<sup>2</sup></span> and revealing <span class="math">𝒩(0, σ<sup>2</sup>)</span>.
+          </p>
+        </div>
+        <div class="callout amber">
+          <div class="callout-title">Over-Scaled: <span class="math">α &gt; 1/2</span> (e.g., <span class="math">α = 1</span>)</div>
+          <p style="font-size: 0.88rem; margin: 0;">
+            Here <span class="math">2α − 1 &gt; 0</span>, so <span class="math">Var(n<sup>α</sup>(X̄<sub>n</sub> − μ)) → ∞</span>. The unnormalized sum <span class="math">∑(X<sub>i</sub> − μ)</span> diffuses outward without bound and fails to converge to any proper probability distribution.
+          </p>
+        </div>
+      </div>
+
+      <h3>Step 3: What Happens When Independence Fails? &amp; Role in Statistical Inference</h3>
+      <div class="grid-2">
+        <div class="callout amber">
+          <div class="callout-title">Breakdown Under Persistent Dependence</div>
+          <p style="font-size: 0.88rem; margin-bottom: 0.45rem;">
+            Suppose observations share a common shock so <span class="math">Corr(X<sub>i</sub>, X<sub>j</sub>) = ρ &gt; 0</span> for all <span class="math">i ≠ j</span>. Because there are <span class="math">n(n−1)/2 = O(n<sup>2</sup>)</span> covariance pairs in Equation (1):
+          </p>
+          <div class="def-formula" style="margin: 0.4rem 0;">
+            Var(<span class="math">X̄<sub>n</sub></span>) = <span class="frac"><span>σ<sup>2</sup></span><span>n</span></span> + <span class="frac"><span>n − 1</span><span>n</span></span><span class="math">ρσ<sup>2</sup></span> &nbsp;→<sup>n→∞</sup>&nbsp; <span class="math">ρσ<sup>2</sup> &gt; 0</span>
+          </div>
+          <p style="font-size: 0.86rem; margin: 0;">
+            Even infinite sample sizes cannot average out common correlation! Conversely, under <em>short-range dependence</em> (stationary mixing time series where <span class="math">∑<sub>h</sub>|γ(h)| &lt; ∞</span>), <span class="math">√n</span> scaling survives with the <strong>Long-Run Variance</strong> <span class="math">σ<sup>2</sup><sub>LRV</sub> = γ(0) + 2∑<sub>h≥1</sub> γ(h)</span>.
+          </p>
+        </div>
+
+        <div class="callout indigo">
+          <div class="callout-title">Consequences for Statistical Inference</div>
+          <ul style="margin: 0; padding-left: 1.15rem; font-size: 0.88rem; color: var(--ink-secondary);">
+            <li style="margin-bottom: 0.35rem;"><strong>Diminishing Returns of Sample Size:</strong> Confidence interval width <span class="math">2 z<sub>1−α/2</sub> (s / √n)</span> shrinks at rate <span class="math">O(n<sup>−1/2</sup>)</span>—quadrupling <span class="math">n</span> only halves uncertainty.</li>
+            <li style="margin-bottom: 0.35rem;"><strong>Signal-to-Noise Amplification:</strong> Test statistics <span class="math">Z = √n(X̄<sub>n</sub> − μ<sub>0</sub>)/s</span> magnify true departures <span class="math">|μ − μ<sub>0</sub>|</span> by <span class="math">√n</span>, driving statistical power toward 1.</li>
+            <li><strong>Cramér–Rao Efficiency:</strong> Fisher information for <span class="math">n</span> i.i.d. observations adds linearly (<span class="math">I<sub>n</sub>(θ) = n I<sub>1</sub>(θ)</span>), so the minimum asymptotic variance scales as <span class="math">1/(n I<sub>1</sub>(θ))</span>, making <span class="math">√n(θ̂<sub>MLE</sub> − θ)</span> asymptotically normal.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 1.5 INTERACTIVE CANVAS SIMULATOR 1: LLN & √n SCALING LABORATORY -->
+    <section id="lab-1" class="lab-card" aria-labelledby="lab1-heading">
+      <div class="lab-header">
+        <div class="lab-title-group">
+          <span class="lab-dot"></span>
+          <div>
+            <h2 id="lab1-heading" class="section-title" style="margin: 0;">Interactive Simulator 1: LLN &amp; <span class="math">√n</span> Scaling Laboratory</h2>
+            <div style="font-size: 0.82rem; color: var(--ink-muted);">
+              Observe pathwise convergence (<span class="math">X̄<sub>k</sub> → μ</span>) alongside the rescaled distribution <span class="math">n<sup>α</sup>(X̄<sub>n</sub> − μ)</span> across 1,000 Monte Carlo replicates.
+            </div>
+          </div>
+        </div>
+        <button type="button" id="sim1-resim-btn" class="btn-primary">↻ Resimulate Trajectories</button>
+      </div>
+
+      <div class="controls-grid">
+        <div class="control-item">
+          <label class="control-label" for="sim1-dist">
+            <span>Parent Distribution <span class="math">X<sub>i</sub></span></span>
+          </label>
+          <select id="sim1-dist">
+            <option value="bernoulli">Bernoulli (p = 0.30) · μ=0.30, σ²=0.21</option>
+            <option value="uniform">Uniform [0, 1] · μ=0.50, σ²=0.083</option>
+            <option value="exponential" selected>Exponential (λ = 1.0) · μ=1.00, σ²=1.00</option>
+            <option value="cauchy">Standard Cauchy (0, 1) · σ² = ∞ (LLN/CLT Fails!)</option>
+          </select>
+        </div>
+
+        <div class="control-item">
+          <label class="control-label" for="sim1-n">
+            <span>Sample Size (<span class="math">n</span>)</span>
+            <span class="control-val" id="sim1-n-val">150</span>
+          </label>
+          <input type="range" id="sim1-n" min="10" max="500" step="5" value="150" />
+        </div>
+
+        <div class="control-item">
+          <label class="control-label" for="sim1-paths">
+            <span>Visible Sample Paths</span>
+            <span class="control-val" id="sim1-paths-val">20</span>
+          </label>
+          <input type="range" id="sim1-paths" min="5" max="40" step="1" value="20" />
+        </div>
+
+        <div class="control-item">
+          <label class="control-label" for="sim1-alpha">
+            <span>Scaling Exponent (<span class="math">α</span>)</span>
+            <span class="control-val" id="sim1-alpha-val">α = 0.50 (√n CLT)</span>
+          </label>
+          <select id="sim1-alpha">
+            <option value="0">α = 0.00 · Unscaled (X̄ₙ − μ) → Collapses to 0</option>
+            <option value="0.5" selected>α = 0.50 · √n Scaling √n(X̄ₙ − μ) → 𝒩(0, σ²)</option>
+            <option value="0.85">α = 0.85 · Over-scaled n⁰·⁸⁵(X̄ₙ − μ) → Diverges</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dual-canvas-grid">
+        <div class="canvas-box">
+          <div class="canvas-caption">
+            <span>Left: Sample Mean Paths <span class="math">X̄<sub>k</sub></span> (<span class="math">k = 1…n</span>) &amp; <span class="math">±ε</span> Band</span>
+            <span id="sim1-left-badge" style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--indigo);">ε = 0.15</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-lln"></canvas>
+          </div>
+        </div>
+
+        <div class="canvas-box">
+          <div class="canvas-caption">
+            <span>Right: 1,000 Replicates of <span class="math">n<sup>α</sup>(X̄<sub>n</sub> − μ)</span> vs. <span class="math">𝒩(0, σ<sup>2</sup>)</span></span>
+            <span id="sim1-right-badge" style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--emerald);">CLT Regime</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-clt"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="telemetry-grid">
+        <div class="stat-tile">
+          <div class="stat-label">True Mean <span class="math">μ</span></div>
+          <div class="stat-value" id="sim1-stat-mu">1.000</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Empirical SD of <span class="math">n<sup>α</sup>(X̄<sub>n</sub>−μ)</span></div>
+          <div class="stat-value" id="sim1-stat-emp-sd" style="color: var(--emerald);">1.000</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Theoretical SD (<span class="math">n<sup>α−0.5</sup>σ</span>)</div>
+          <div class="stat-value" id="sim1-stat-th-sd" style="color: var(--indigo);">1.000</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Cross-Sectional <span class="math-bb">ℙ̂</span>(|<span class="math">X̄<sub>n</sub>−μ</span>| ≤ <span class="math">ε</span>)</div>
+          <div class="stat-value" id="sim1-stat-prob">93.4%</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         MODULE 2: CONDITIONAL PROBABILITY, BAYES' THEOREM & STATISTICAL INFERENCE
+         ====================================================================== -->
+    <div id="module-2" class="module-banner m2">
+      <div>
+        <span class="module-num" style="color: var(--emerald);">Module II · Inverse Probability &amp; Learning</span>
+        <h2 class="module-title">Conditional Probability, Bayes' Theorem &amp; Statistical Inference</h2>
+      </div>
+      <span class="section-badge">Prior · Likelihood · Posterior · Interactive Studio</span>
+    </div>
+
+    <!-- 2.1 CONDITIONAL PROBABILITY IN PROBABILITY THEORY VS STATISTICS -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">2.1 Conditional Probability in Probability Theory vs. Statistics</h2>
+        <span class="section-badge">Forward Deduction vs. Inverse Induction</span>
+      </div>
+
+      <div class="grid-2">
+        <div class="def-card indigo-top">
+          <div>
+            <div class="def-title">
+              <span>Probability Theory Perspective (Forward)</span>
+              <span class="def-symbol">ℙ(A | B)</span>
+            </div>
+            <div class="def-formula">
+              <span class="math-bb">ℙ</span>(<span class="math">A</span> | <span class="math">B</span>) = <span class="frac"><span><span class="math-bb">ℙ</span>(<span class="math">A ∩ B</span>)</span><span><span class="math-bb">ℙ</span>(<span class="math">B</span>)</span></span> &nbsp; (<span class="math-bb">ℙ</span>(<span class="math">B</span>) &gt; 0)
+            </div>
+            <p style="font-size: 0.9rem;">
+              Given a known probability model <span class="math">(Ω, ℱ, ℙ)</span>, conditioning on event <span class="math">B</span> restricts the sample space from <span class="math">Ω</span> to <span class="math">B</span> and renormalizes measure so <span class="math-bb">ℙ</span>(<span class="math">B</span> | <span class="math">B</span>) = 1. Together with a partition {<span class="math">A<sub>1</sub>, …, A<sub>k</sub></span>}, this yields the <strong>Law of Total Probability</strong>:
+            </p>
+            <div class="def-formula" style="margin-bottom: 0;">
+              <span class="math-bb">ℙ</span>(<span class="math">B</span>) = <span class="sum">∑<sub>i=1</sub><sup>k</sup></span> <span class="math-bb">ℙ</span>(<span class="math">B</span> | <span class="math">A<sub>i</sub></span>)<span class="math-bb">ℙ</span>(<span class="math">A<sub>i</sub></span>)
+            </div>
+          </div>
+        </div>
+
+        <div class="def-card emerald-top">
+          <div>
+            <div class="def-title">
+              <span>Statistical Inference Perspective (Inverse)</span>
+              <span class="def-symbol">p(θ | x)</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              In statistical inference, we observe data <span class="math">x</span> and seek to infer an unknown parameter <span class="math">θ ∈ Θ</span>. Two major paradigms handle conditioning differently:
+            </p>
+            <ul style="margin: 0; padding-left: 1.15rem; font-size: 0.89rem; color: var(--ink-secondary);">
+              <li style="margin-bottom: 0.45rem;">
+                <strong>Frequentist Conditioning:</strong> Treats <span class="math">θ</span> as a fixed unknown constant and evaluates sampling probabilities <span class="math-bb">ℙ</span>(<span class="math">X ∈ R</span> | <span class="math">θ</span>) over hypothetical repetitions of the data <span class="math">X</span>.
+              </li>
+              <li>
+                <strong>Bayesian Conditioning:</strong> Treats <span class="math">θ</span> as a random variable with a probability distribution, conditioning on the <em>actually observed data</em> <span class="math">X = x</span> to invert probability via Bayes' Theorem and obtain <span class="math">p(θ | x)</span>.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 2.2 THE THREE PILLARS OF BAYESIAN INFERENCE & BAYES' THEOREM -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">2.2 The Three Fundamental Components of Bayesian Inference</h2>
+        <span class="section-badge">Bayes' Theorem &amp; Sequential Updating</span>
+      </div>
+
+      <p>
+        For a parameter <span class="math">θ ∈ Θ</span> and observed data <span class="math">x</span>, Bayes' Theorem links the joint density <span class="math">p(x, θ) = p(x | θ)p(θ) = p(θ | x)p(x)</span> to express the posterior distribution over <span class="math">θ</span>:
+      </p>
+
+      <div class="eq-block emerald-accent">
+        <span>
+          <span class="math" style="color: var(--emerald-dark); font-weight: 700;">p(θ | x)</span>
+          =
+          <span class="frac">
+            <span>
+              <span class="math" style="color: var(--amber-dark); font-weight: 700;">p(x | θ)</span>
+              ·
+              <span class="math" style="color: var(--indigo-dark); font-weight: 700;">p(θ)</span>
+            </span>
+            <span>
+              <span class="math">p(x)</span>
+            </span>
+          </span>
+          =
+          <span class="frac">
+            <span>
+              <span class="math">p(x | θ) · p(θ)</span>
+            </span>
+            <span>
+              ∫<sub><span class="math">Θ</span></sub> <span class="math">p(x | θ′) p(θ′) dθ′</span>
+            </span>
+          </span>
+          &nbsp;∝&nbsp;
+          <span class="math" style="color: var(--amber-dark);">ℒ(θ | x)</span> · <span class="math" style="color: var(--indigo-dark);">p(θ)</span>
+        </span>
+        <span class="eq-label">Bayes' Rule</span>
+      </div>
+
+      <div class="grid-3">
+        <div class="def-card indigo-top">
+          <div>
+            <div class="def-title">
+              <span>1. Prior Probability</span>
+              <span class="def-symbol" style="color: var(--indigo-dark);">p(θ)</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              Quantifies knowledge, physical constraints, or historical evidence about parameter <span class="math">θ</span> <em>before</em> observing the current dataset <span class="math">x</span>. It acts as a baseline probability measure over <span class="math">Θ</span> and naturally regularizes estimation when sample sizes are small.
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            <strong>Forms:</strong> Informative (historical studies), Weakly Informative (mild regularization), or Reference/Jeffreys priors.
+          </div>
+        </div>
+
+        <div class="def-card amber-top">
+          <div>
+            <div class="def-title">
+              <span>2. Likelihood Function</span>
+              <span class="def-symbol" style="color: var(--amber-dark);">ℒ(θ | x) = p(x | θ)</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              Evaluated at the <em>fixed observed data</em> <span class="math">x</span> and viewed as a function of <span class="math">θ</span>. It measures the relative plausibility of different parameter values generating the observed sample.
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--amber-dark);">
+            <strong>Crucial Caveat:</strong> <span class="math">ℒ(θ | x)</span> is <em>not</em> a probability density over <span class="math">θ</span> (in general ∫<span class="math">ℒ(θ | x) dθ ≠ 1</span>).
+          </div>
+        </div>
+
+        <div class="def-card emerald-top">
+          <div>
+            <div class="def-title">
+              <span>3. Posterior Probability</span>
+              <span class="def-symbol" style="color: var(--emerald-dark);">p(θ | x)</span>
+            </div>
+            <p style="font-size: 0.9rem;">
+              The renormalized product of Likelihood and Prior, divided by the marginal evidence <span class="math">p(x)</span>. It represents our complete updated state of belief about <span class="math">θ</span> after assimilating the data <span class="math">x</span>.
+            </p>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            <strong>Summaries:</strong> Posterior Mean <span class="math-bb">𝔼</span>[<span class="math">θ|x</span>], MAP estimate, and 95% Credible Intervals.
+          </div>
+        </div>
+      </div>
+
+      <h3>Why Sequential Bayesian Updating Plays a Central Role in Inference</h3>
+      <div class="callout emerald">
+        <div class="callout-title">Coherent Sequential Learning &amp; Order Invariance</div>
+        <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+          Suppose conditionally independent datasets <span class="math">x<sub>1</sub></span> and <span class="math">x<sub>2</sub></span> arrive sequentially. After observing <span class="math">x<sub>1</sub></span>, we obtain the posterior <span class="math">p(θ | x<sub>1</sub>) ∝ p(x<sub>1</sub> | θ)p(θ)</span>. When <span class="math">x<sub>2</sub></span> arrives, today's posterior becomes tomorrow's prior:
+        </p>
+        <div class="def-formula" style="margin: 0.45rem 0;">
+          <span class="math">p(θ | x<sub>1</sub>, x<sub>2</sub>)</span> ∝ <span class="math">p(x<sub>2</sub> | θ) · p(θ | x<sub>1</sub>)</span> ∝ <span class="math">p(x<sub>2</sub> | θ) · p(x<sub>1</sub> | θ) · p(θ)</span> = <span class="math">p(x<sub>1</sub>, x<sub>2</sub> | θ) p(θ)</span>
+        </div>
+        <p style="font-size: 0.88rem; margin: 0;">
+          Thus sequential updating produces the <em>exact same posterior</em> as analyzing all data in a single batch. Moreover, posterior uncertainty naturally propagates into predictions via the <strong>Posterior Predictive Distribution</strong> <span class="math">p(x̃ | x) = ∫ p(x̃ | θ)p(θ | x) dθ</span>, avoiding overconfident plug-in estimates.
+        </p>
+      </div>
+    </article>
+
+    <!-- 2.3 WORKED MATHEMATICAL EXAMPLES & APPLICATIONS -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">2.3 Worked Examples: Priors, Likelihoods &amp; Conjugate Updating</h2>
+        <span class="section-badge">Analytical Derivations</span>
+      </div>
+
+      <div class="grid-3">
+        <!-- Example 1: Beta-Binomial -->
+        <div class="def-card emerald-top">
+          <div>
+            <div class="def-title">
+              <span>Example 1: Beta–Binomial Model</span>
+              <span class="def-symbol">Clinical Trial</span>
+            </div>
+            <p style="font-size: 0.88rem;">
+              <strong>Prior:</strong> Response rate <span class="math">θ ~ Beta(α<sub>0</sub>, β<sub>0</sub>)</span>, so <span class="math">p(θ) ∝ θ<sup>α₀−1</sup>(1−θ)<sup>β₀−1</sup></span>.<br />
+              <strong>Likelihood:</strong> <span class="math">k</span> successes in <span class="math">n</span> patients: <span class="math">ℒ(θ|k) ∝ θ<sup>k</sup>(1−θ)<sup>n−k</sup></span>.<br />
+              <strong>Posterior:</strong> <span class="math">θ | k ~ Beta(α<sub>0</sub> + k, β<sub>0</sub> + n − k)</span>.
+            </p>
+            <div class="def-formula" style="font-size: 0.88rem;">
+              <span class="math-bb">𝔼</span>[<span class="math">θ|k</span>] = <span class="math">w</span> · <span class="frac"><span>k</span><span>n</span></span> + (1 − <span class="math">w</span>) · <span class="frac"><span>α<sub>0</sub></span><span>α<sub>0</sub>+β<sub>0</sub></span></span>
+            </div>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            Weight <span class="math">w = n/(n + α<sub>0</sub> + β<sub>0</sub>)</span>: shrinks toward prior at small <span class="math">n</span>, converges to MLE <span class="math">k/n</span> as <span class="math">n → ∞</span>.
+          </div>
+        </div>
+
+        <!-- Example 2: Normal-Normal -->
+        <div class="def-card indigo-top">
+          <div>
+            <div class="def-title">
+              <span>Example 2: Normal–Normal Model</span>
+              <span class="def-symbol">Sensor Calibration</span>
+            </div>
+            <p style="font-size: 0.88rem;">
+              <strong>Prior:</strong> <span class="math">θ ~ 𝒩(μ<sub>0</sub>, τ<sub>0</sub><sup>2</sup>)</span> (prior precision <span class="math">1/τ<sub>0</sub><sup>2</sup></span>).<br />
+              <strong>Likelihood:</strong> <span class="math">X<sub>1</sub>,…,X<sub>n</sub> ~ 𝒩(θ, σ<sup>2</sup>)</span> (data precision <span class="math">n/σ<sup>2</sup></span>).<br />
+              <strong>Posterior:</strong> <span class="math">θ | X̄<sub>n</sub> ~ 𝒩(μ<sub>n</sub>, τ<sub>n</sub><sup>2</sup>)</span> where <strong>precisions add</strong>:
+            </p>
+            <div class="def-formula" style="font-size: 0.88rem;">
+              <span class="frac"><span>1</span><span>τ<sub>n</sub><sup>2</sup></span></span> = <span class="frac"><span>1</span><span>τ<sub>0</sub><sup>2</sup></span></span> + <span class="frac"><span>n</span><span>σ<sup>2</sup></span></span>, &nbsp;
+              <span class="math">μ<sub>n</sub></span> = <span class="frac"><span>τ<sub>0</sub><sup>−2</sup>μ<sub>0</sub> + nσ<sup>−2</sup>X̄<sub>n</sub></span><span>τ<sub>0</sub><sup>−2</sup> + nσ<sup>−2</sup></span></span>
+            </div>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            Foundation of Kalman filters, ridge regression (<span class="math">L</span><sup>2</sup> penalty = Gaussian prior), and hierarchical models.
+          </div>
+        </div>
+
+        <!-- Example 3: Medical Screening & Base Rate Fallacy -->
+        <div class="def-card amber-top">
+          <div>
+            <div class="def-title">
+              <span>Example 3: Medical Diagnostic Test</span>
+              <span class="def-symbol">Base Rate Fallacy</span>
+            </div>
+            <p style="font-size: 0.88rem;">
+              Suppose disease prevalence is <span class="math-bb">ℙ</span>(<span class="math">D</span>) = 0.01 (1%), test sensitivity <span class="math-bb">ℙ</span>(+|<span class="math">D</span>) = 0.99, and false positive rate <span class="math-bb">ℙ</span>(+|¬<span class="math">D</span>) = 0.05.
+            </p>
+            <div class="def-formula" style="font-size: 0.86rem;">
+              <span class="math-bb">ℙ</span>(<span class="math">D</span>|+) = <span class="frac"><span>0.99 × 0.01</span><span>0.99(0.01) + 0.05(0.99)</span></span> = <span class="frac"><span>0.0099</span><span>0.0594</span></span> ≈ <strong>16.67%</strong>
+            </div>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--ink-muted);">
+            Even with 99% sensitivity, false positives from the 99% healthy population outnumber true positives 5-to-1!
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 2.4 ADVANTAGES, LIMITATIONS & INFLUENCE ON CONCLUSIONS -->
+    <article class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">2.4 Advantages, Limitations &amp; Influence on Statistical Conclusions</h2>
+        <span class="section-badge">Methodological Appraisal</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Advantages of Bayesian Inference</th>
+              <th>Limitations &amp; Practical Challenges</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Prior Information &amp; Regularization</strong></td>
+              <td>Principled incorporation of domain science and historical data; shrinks noisy small-sample estimates toward plausible regions, preventing overfitting and boundary singularities (e.g., <span class="math">0/n</span> events).</td>
+              <td>When sample size <span class="math">n</span> is small, posterior conclusions can be sensitive to prior choice; poorly justified or overly dogmatic priors can bias estimates.</td>
+            </tr>
+            <tr>
+              <td><strong>Uncertainty Quantification</strong></td>
+              <td>Produces exact finite-sample posterior distributions without asymptotic normality approximations; yields direct probability statements (<span class="math-bb">ℙ</span>(<span class="math">θ &gt; 0 | x</span>) = 0.96).</td>
+              <td>Requires specifying a full generative likelihood model; model misspecification affects both likelihood and posterior calibration.</td>
+            </tr>
+            <tr>
+              <td><strong>Computation &amp; Asymptotics</strong></td>
+              <td>Conjugate models give closed-form updates; by the <strong>Bernstein–von Mises Theorem</strong>, as <span class="math">n → ∞</span>, smooth priors wash out and posteriors match frequentist <span class="math">𝒩(θ̂<sub>MLE</sub>, [nI(θ)]<sup>−1</sup>)</span> asymptotics.</td>
+              <td>Non-conjugate high-dimensional models require numerical integration via Markov Chain Monte Carlo (HMC/NUTS) or Variational Inference, increasing computational cost.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- 2.5 INTERACTIVE CANVAS SIMULATOR 2: BAYESIAN UPDATING & DIAGNOSTIC LAB -->
+    <section id="lab-2" class="lab-card emerald-lab" aria-labelledby="lab2-heading">
+      <div class="lab-header">
+        <div class="lab-title-group">
+          <span class="lab-dot emerald"></span>
+          <div>
+            <h2 id="lab2-heading" class="section-title" style="margin: 0;">Interactive Simulator 2: Bayesian Beta–Binomial &amp; Diagnostic Laboratory</h2>
+            <div style="font-size: 0.82rem; color: var(--ink-muted);">
+              Explore how Prior <span class="math">p(θ)</span> and Likelihood <span class="math">ℒ(θ|x)</span> combine into Posterior <span class="math">p(θ|x)</span>, and test sequential updating &amp; base-rate effects.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lab Mode Tabs -->
+      <div class="tab-bar" role="tablist">
+        <button type="button" class="tab-btn active" id="tab-btn-beta" role="tab" aria-selected="true">
+          Tab A: Beta–Binomial Continuous Updating Lab
+        </button>
+        <button type="button" class="tab-btn" id="tab-btn-diag" role="tab" aria-selected="false">
+          Tab B: Diagnostic Bayes &amp; Base Rate Explorer
+        </button>
+      </div>
+
+      <!-- TAB A: BETA-BINOMIAL LAB -->
+      <div id="tab-pane-beta" class="tab-pane active">
+        <div class="btn-row">
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--ink-muted);">Prior Presets:</span>
+          <button type="button" class="btn-secondary" data-preset="uniform">Uniform Beta(1, 1)</button>
+          <button type="button" class="btn-secondary" data-preset="skeptical">Skeptical Beta(4, 16)</button>
+          <button type="button" class="btn-secondary" data-preset="strong">Strong Prior Beta(20, 20)</button>
+          <button type="button" class="btn-secondary" data-preset="jeffreys">Jeffreys Beta(0.5, 0.5)</button>
+          <button type="button" class="btn-emerald" id="btn-seq-batch" title="Simulates 10 new trials at true θ=0.45 and promotes current Posterior to new Prior">
+            + Sequential Update: Add Batch of 10 Trials (θ<sub>true</sub>=0.45)
+          </button>
+        </div>
+
+        <div class="controls-grid">
+          <div class="control-item">
+            <label class="control-label" for="beta-a0">
+              <span>Prior <span class="math">α<sub>0</sub></span> (Pseudo-Successes)</span>
+              <span class="control-val emerald" id="beta-a0-val">2.0</span>
+            </label>
+            <input type="range" class="emerald-range" id="beta-a0" min="0.5" max="40" step="0.5" value="2.0" />
+          </div>
+
+          <div class="control-item">
+            <label class="control-label" for="beta-b0">
+              <span>Prior <span class="math">β<sub>0</sub></span> (Pseudo-Failures)</span>
+              <span class="control-val emerald" id="beta-b0-val">8.0</span>
+            </label>
+            <input type="range" class="emerald-range" id="beta-b0" min="0.5" max="40" step="0.5" value="8.0" />
+          </div>
+
+          <div class="control-item">
+            <label class="control-label" for="beta-n">
+              <span>Sample Size (<span class="math">n</span> Trials)</span>
+              <span class="control-val" id="beta-n-val">20</span>
+            </label>
+            <input type="range" id="beta-n" min="1" max="200" step="1" value="20" />
+          </div>
+
+          <div class="control-item">
+            <label class="control-label" for="beta-k">
+              <span>Observed Successes (<span class="math">k</span>)</span>
+              <span class="control-val" id="beta-k-val">9</span>
+            </label>
+            <input type="range" id="beta-k" min="0" max="20" step="1" value="9" />
+          </div>
+        </div>
+
+        <div class="canvas-box">
+          <div class="canvas-caption">
+            <span>Probability Density Curves: Prior <span class="math">p(θ)</span>, Scaled Likelihood <span class="math">ℒ(θ|k)</span> &amp; Posterior <span class="math">p(θ|k)</span> with 95% Credible Interval</span>
+            <span id="beta-post-params" style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--emerald-dark);">Posterior: Beta(11.0, 19.0)</span>
+          </div>
+          <div class="canvas-wrap tall">
+            <canvas id="canvas-bayes"></canvas>
+          </div>
+        </div>
+
+        <!-- Precision Weight Split Bar -->
+        <div class="weight-bar-container">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700;">
+            <span style="color: var(--emerald-dark);" id="weight-data-label">Empirical Data Weight w = 66.7% (n = 20)</span>
+            <span style="color: #475569;" id="weight-prior-label">Prior Weight (1 − w) = 33.3% (α₀+β₀ = 10.0)</span>
+          </div>
+          <div class="weight-bar-track">
+            <div class="weight-bar-data" id="weight-bar-data" style="width: 66.7%;"></div>
+            <div class="weight-bar-prior" id="weight-bar-prior" style="width: 33.3%;"></div>
+          </div>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="stat-tile">
+            <div class="stat-label">Prior Mean <span class="math">μ<sub>0</sub></span></div>
+            <div class="stat-value" id="bayes-stat-prior">0.200</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Sample MLE (<span class="math">k/n</span>)</div>
+            <div class="stat-value" id="bayes-stat-mle" style="color: var(--amber-dark);">0.450</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Posterior Mean <span class="math-bb">𝔼</span>[<span class="math">θ|k</span>]</div>
+            <div class="stat-value" id="bayes-stat-post" style="color: var(--emerald-dark);">0.367</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Posterior MAP Mode</div>
+            <div class="stat-value" id="bayes-stat-map">0.357</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">95% Credible Interval</div>
+            <div class="stat-value" id="bayes-stat-ci" style="font-size: 0.92rem;">[0.207, 0.543]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB B: DIAGNOSTIC BAYES & BASE RATE EXPLORER -->
+      <div id="tab-pane-diag" class="tab-pane">
+        <div class="btn-row">
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--ink-muted);">Clinical Scenarios:</span>
+          <button type="button" class="btn-secondary" data-diag="rare">Rare Disease (1% Prior)</button>
+          <button type="button" class="btn-secondary" data-diag="moderate">Symptomatic Clinic (15% Prior)</button>
+          <button type="button" class="btn-secondary" data-diag="high">High-Risk Ward (40% Prior)</button>
+          <button type="button" class="btn-emerald" id="btn-second-test">
+            ↻ Apply 2nd Independent Positive Test (Posterior → New Prior)
+          </button>
+        </div>
+
+        <div class="controls-grid">
+          <div class="control-item">
+            <label class="control-label" for="diag-prev">
+              <span>Prior Prevalence <span class="math-bb">ℙ</span>(<span class="math">H</span>)</span>
+              <span class="control-val" id="diag-prev-val">1.0%</span>
+            </label>
+            <input type="range" id="diag-prev" min="0.1" max="60" step="0.1" value="1.0" />
+          </div>
+
+          <div class="control-item">
+            <label class="control-label" for="diag-sens">
+              <span>Sensitivity <span class="math-bb">ℙ</span>(<span class="math">E | H</span>)</span>
+              <span class="control-val emerald" id="diag-sens-val">99.0%</span>
+            </label>
+            <input type="range" class="emerald-range" id="diag-sens" min="50" max="99.9" step="0.1" value="99.0" />
+          </div>
+
+          <div class="control-item">
+            <label class="control-label" for="diag-fpr">
+              <span>False Positive Rate <span class="math-bb">ℙ</span>(<span class="math">E | ¬H</span>)</span>
+              <span class="control-val" style="color: var(--amber-dark);" id="diag-fpr-val">5.0%</span>
+            </label>
+            <input type="range" id="diag-fpr" min="0.1" max="30" step="0.1" value="5.0" />
+          </div>
+        </div>
+
+        <div class="canvas-box">
+          <div class="canvas-caption">
+            <span>Population Joint Event Decomposition (1,000 Subjects) &amp; Positive Evidence Breakdown</span>
+            <span id="diag-caption-post" style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--emerald-dark);">Posterior ℙ(H | E) = 16.67%</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas-diag"></canvas>
+          </div>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="stat-tile">
+            <div class="stat-label">Prior <span class="math-bb">ℙ</span>(<span class="math">H</span>)</div>
+            <div class="stat-value" id="diag-stat-prior">1.00%</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Marginal Evidence <span class="math-bb">ℙ</span>(<span class="math">E</span>)</div>
+            <div class="stat-value" id="diag-stat-ev">5.94%</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Posterior <span class="math-bb">ℙ</span>(<span class="math">H | E</span>)</div>
+            <div class="stat-value" id="diag-stat-post" style="color: var(--emerald-dark);">16.67%</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Likelihood Ratio (BF<sub>10</sub>)</div>
+            <div class="stat-value" id="diag-stat-lr" style="color: var(--indigo-dark);">19.80×</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       QUICK FORMULA REFERENCE SLIDE-OVER DRAWER
+       ======================================================================== -->
+  <div id="drawer-backdrop" class="drawer-backdrop"></div>
+  <aside id="formula-drawer" class="formula-drawer" aria-label="Quick Formula Reference">
+    <div class="drawer-head">
+      <div>
+        <strong style="font-size: 1.02rem; color: var(--ink-primary);">∑ Quick Formula Reference</strong>
+        <div style="font-size: 0.78rem; color: var(--ink-muted);">Click "Copy" to copy any identity to clipboard</div>
+      </div>
+      <button type="button" id="close-drawer-btn" class="btn-secondary">✕ Close</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--indigo-dark);">Almost Sure Convergence</strong>
+          <button type="button" class="copy-chip" data-copy="P({ω ∈ Ω : lim_{n→∞} X_n(ω) = X(ω)}) = 1">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">ℙ({ω ∈ Ω : lim<sub>n→∞</sub> X<sub>n</sub>(ω) = X(ω)}) = 1</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--emerald-dark);">Mean-Square (L²) &amp; MSE Decomposition</strong>
+          <button type="button" class="copy-chip" data-copy="E[(X_n - θ)^2] = Bias(X_n)^2 + Var(X_n) → 0">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">𝔼[(X<sub>n</sub> − θ)<sup>2</sup>] = Bias(X<sub>n</sub>)<sup>2</sup> + Var(X<sub>n</sub>) → 0</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--amber-dark);">Convergence in Probability &amp; Chebyshev</strong>
+          <button type="button" class="copy-chip" data-copy="P(|X_n - X| > ε) ≤ E[|X_n - X|^2] / ε^2 → 0">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">ℙ(|X<sub>n</sub> − X| &gt; ε) ≤ 𝔼[|X<sub>n</sub> − X|<sup>2</sup>] / ε<sup>2</sup> → 0</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--indigo-dark);">Central Limit Theorem &amp; √n Scaling</strong>
+          <button type="button" class="copy-chip" data-copy="√n (X̄_n - μ) / σ →d N(0, 1),  Var(X̄_n) = σ^2 / n">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">√n (X̄<sub>n</sub> − μ) / σ →<sup>d</sup> 𝒩(0, 1), &nbsp; Var(X̄<sub>n</sub>) = σ<sup>2</sup>/n</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--indigo-dark);">Delta Method</strong>
+          <button type="button" class="copy-chip" data-copy="√n (g(X̄_n) - g(μ)) →d N(0, [g'(μ)]^2 σ^2)">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">√n (g(X̄<sub>n</sub>) − g(μ)) →<sup>d</sup> 𝒩(0, [g′(μ)]<sup>2</sup> σ<sup>2</sup>)</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--emerald-dark);">Bayes' Theorem (Continuous)</strong>
+          <button type="button" class="copy-chip" data-copy="p(θ | x) = [p(x | θ) p(θ)] / ∫ p(x | θ') p(θ') dθ'">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">p(θ | x) = [p(x | θ) p(θ)] / ∫ p(x | θ′) p(θ′) dθ′</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--emerald-dark);">Beta–Binomial Conjugate Posterior</strong>
+          <button type="button" class="copy-chip" data-copy="θ ~ Beta(α₀, β₀), k ~ Bin(n, θ) ⇒ θ|k ~ Beta(α₀ + k, β₀ + n - k)">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">θ|k ~ Beta(α<sub>0</sub> + k, β<sub>0</sub> + n − k)</div>
+      </div>
+
+      <div class="formula-item">
+        <div class="formula-item-head">
+          <strong style="font-size: 0.86rem; color: var(--emerald-dark);">Normal–Normal Precision Updating</strong>
+          <button type="button" class="copy-chip" data-copy="1/τ_n^2 = 1/τ_0^2 + n/σ^2,  μ_n = (μ_0/τ_0^2 + n X̄_n/σ^2) / (1/τ_0^2 + n/σ^2)">Copy</button>
+        </div>
+        <div class="def-formula" style="margin: 0;">1/τ<sub>n</sub><sup>2</sup> = 1/τ<sub>0</sub><sup>2</sup> + n/σ<sup>2</sup></div>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">Copied to clipboard</div>
+
+  <footer>
+    <strong>Probability Convergence &amp; Bayesian Statistical Inference</strong> · Self-Contained Interactive Monograph &amp; Monte Carlo Laboratory
+  </footer>
+
+  <!-- ========================================================================
+       VANILLA JAVASCRIPT: MATHEMATICAL ENGINE, SIMULATORS & UI CONTROLLERS
+       ======================================================================== -->
+  <script>
+    (function () {
+      "use strict";
+
+      /* ======================================================================
+         1. SPECIAL MATHEMATICAL FUNCTIONS (LOG-GAMMA & INCOMPLETE BETA)
+         ====================================================================== */
+      function logGamma(z) {
+        // Lanczos approximation (g = 7, 9 coefficients) accurate to ~15 digits
+        const p = [
+          0.99999999999980993,
+          676.5203681218851,
+          -1259.1392167224028,
+          771.32342877765313,
+          -176.61502916214059,
+          12.507343278686905,
+          -0.13857109526572012,
+          9.9843695780195716e-6,
+          1.5056327351493116e-7
+        ];
+        if (z < 0.5) {
+          return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+        }
+        z -= 1;
+        let x = p[0];
+        for (let i = 1; i < p.length; i++) {
+          x += p[i] / (z + i);
+        }
+        const t = z + p.length - 1.5;
+        return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+      }
+
+      function betaPdf(x, a, b) {
+        if (x <= 0 || x >= 1) return 0;
+        const lnB = logGamma(a) + logGamma(b) - logGamma(a + b);
+        return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - lnB);
+      }
+
+      function betacf(a, b, x) {
+        // Lentz continued fraction for incomplete beta
+        const MAXIT = 120;
+        const EPS = 3e-12;
+        const FPMIN = 1e-30;
+        const qab = a + b;
+        const qap = a + 1;
+        const qam = a - 1;
+        let c = 1;
+        let d = 1 - (qab * x) / qap;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+        d = 1 / d;
+        let h = d;
+        for (let m = 1; m <= MAXIT; m++) {
+          const m2 = 2 * m;
+          let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+          d = 1 + aa * d;
+          if (Math.abs(d) < FPMIN) d = FPMIN;
+          c = 1 + aa / c;
+          if (Math.abs(c) < FPMIN) c = FPMIN;
+          d = 1 / d;
+          h *= d * c;
+          aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+          d = 1 + aa * d;
+          if (Math.abs(d) < FPMIN) d = FPMIN;
+          c = 1 + aa / c;
+          if (Math.abs(c) < FPMIN) c = FPMIN;
+          d = 1 / d;
+          const del = d * c;
+          h *= del;
+          if (Math.abs(del - 1.0) < EPS) break;
+        }
+        return h;
+      }
+
+      function regIncompleteBeta(x, a, b) {
+        if (x <= 0) return 0;
+        if (x >= 1) return 1;
+        const bt = Math.exp(
+          logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x)
+        );
+        if (x < (a + 1) / (a + b + 2)) {
+          return (bt * betacf(a, b, x)) / a;
+        } else {
+          return 1 - (bt * betacf(b, a, 1 - x)) / b;
+        }
+      }
+
+      function betaQuantile(p, a, b) {
+        if (p <= 0) return 0;
+        if (p >= 1) return 1;
+        let lo = 0;
+        let hi = 1;
+        for (let iter = 0; iter < 48; iter++) {
+          const mid = 0.5 * (lo + hi);
+          const cdf = regIncompleteBeta(mid, a, b);
+          if (cdf < p) lo = mid;
+          else hi = mid;
+        }
+        return 0.5 * (lo + hi);
+      }
+
+      /* ======================================================================
+         2. HIGH-DPI CANVAS HELPER
+         ====================================================================== */
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const width = Math.max(240, rect.width);
+        const height = Math.max(200, rect.height);
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, width, height };
+      }
+
+      /* ======================================================================
+         3. COUNTEREXAMPLE EXPLORER & TYPEWRITER SEQUENCE STEPPER
+         ====================================================================== */
+      const counterexamples = {
+        "p-not-as": {
+          badge: "Counterexample: P ⇏ a.s.",
+          badgeColor: "var(--amber)",
+          title: "The Typewriter Sequence on Ω = [0, 1]",
+          body: `
+            <p style="font-size: 0.9rem;">
+              Partition <span class="math">[0, 1]</span> into <span class="math">k</span> subintervals of width <span class="math">1/k</span> for <span class="math">k = 1, 2, 3, …</span> and define <span class="math">X<sub>n</sub>(ω) = <strong>1</strong><sub>I<sub>n</sub></sub>(ω)</span> sweeping left-to-right across <span class="math">[0, 1]</span>:
+              <span class="math">I<sub>1</sub>=[0,1], I<sub>2</sub>=[0,½], I<sub>3</sub>=[½,1], I<sub>4</sub>=[0,⅓], I<sub>5</sub>=[⅓,⅔], …</span>
+            </p>
+            <div class="def-formula" style="font-size: 0.88rem;">
+              <span class="math-bb">ℙ</span>(|<span class="math">X<sub>n</sub> − 0</span>| &gt; <span class="math">ε</span>) = <span class="frac"><span>1</span><span>k(n)</span></span> → 0 &nbsp;(so <span class="math">X<sub>n</sub> →<sup>P</sup> 0</span>), &nbsp;yet ∀<span class="math">ω ∈ [0,1]</span>, <span class="math">X<sub>n</sub>(ω) = 1</span> i.o.!
+            </div>
+            <p style="font-size: 0.86rem; margin-bottom: 0.4rem;">
+              <strong>Interactive Typewriter Interval Visualizer:</strong> Step through <span class="math">n</span> to watch the active indicator pulse shrink in width while repeatedly hitting every point in <span class="math">[0, 1]</span>.
+            </p>
+          `,
+          interactive: true
+        },
+        "as-not-l2": {
+          badge: "Counterexample: a.s. ⇏ L²",
+          badgeColor: "var(--amber)",
+          title: "Shrinking Interval with Growing Spike",
+          body: `
+            <p style="font-size: 0.9rem;">
+              On <span class="math">Ω = [0, 1]</span> with Lebesgue measure, define <span class="math">X<sub>n</sub>(ω) = √n · <strong>1</strong><sub>[0, 1/n]</sub>(ω)</span>.
+            </p>
+            <div class="def-formula" style="font-size: 0.88rem;">
+              ∀<span class="math">ω ∈ (0, 1]</span>, once <span class="math">n &gt; 1/ω</span>, <span class="math">X<sub>n</sub>(ω) = 0</span> &nbsp;⟹&nbsp; <span class="math">X<sub>n</sub> →<sup>a.s.</sup> 0</span>.<br />
+              However, <span class="math-bb">𝔼</span>[|<span class="math">X<sub>n</sub> − 0</span>|<sup>2</sup>] = (<span class="math">√n</span>)<sup>2</sup> · <span class="frac"><span>1</span><span>n</span></span> = <strong>1</strong> ↛ 0 &nbsp;⟹&nbsp; <span class="math">X<sub>n</sub> ↛<sup>L²</sup> 0</span>!
+            </div>
+            <p style="font-size: 0.87rem; margin: 0;">
+              <strong>Key Insight:</strong> Almost sure convergence ignores tail probability mass, whereas <span class="math">L</span><sup>2</sup> convergence penalizes rare extreme spikes quadratically. Adding <em>Uniform Integrability</em> of <span class="math">{|X<sub>n</sub>|<sup>2</sup>}</span> prevents energy escape to infinity.
+            </p>
+          `,
+          interactive: false
+        },
+        "d-not-p": {
+          badge: "Counterexample: d ⇏ P",
+          badgeColor: "var(--amber)",
+          title: "Mirror Bernoulli Coupling",
+          body: `
+            <p style="font-size: 0.9rem;">
+              Let <span class="math">X ~ Bernoulli(0.5)</span> and define <span class="math">X<sub>n</sub> = 1 − X</span> for every <span class="math">n ≥ 1</span>.
+            </p>
+            <div class="def-formula" style="font-size: 0.88rem;">
+              Since <span class="math">1 − X ~ Bernoulli(0.5)</span>, <span class="math">F<sub>X<sub>n</sub></sub>(x) = F<sub>X</sub>(x)</span> ∀<span class="math">n</span> &nbsp;⟹&nbsp; <span class="math">X<sub>n</sub> →<sup>d</sup> X</span>.<br />
+              Yet |<span class="math">X<sub>n</sub> − X</span>| = |1 − 2<span class="math">X</span>| = <strong>1</strong> everywhere &nbsp;⟹&nbsp; <span class="math-bb">ℙ</span>(|<span class="math">X<sub>n</sub> − X</span>| &gt; 0.5) = <strong>1</strong> ↛ 0!
+            </div>
+            <p style="font-size: 0.87rem; margin: 0;">
+              <strong>Key Insight:</strong> Convergence in distribution depends solely on marginal CDFs <span class="math">F<sub>X<sub>n</sub></sub></span> and says nothing about how <span class="math">X<sub>n</sub></span> and <span class="math">X</span> are jointly coupled.
+            </p>
+          `,
+          interactive: false
+        },
+        "upgrades": {
+          badge: "Sufficient Conditions for Reverse Implications",
+          badgeColor: "var(--indigo)",
+          title: "When Do Weaker Modes Upgrade to Stronger Modes?",
+          body: `
+            <ul style="margin: 0; padding-left: 1.15rem; font-size: 0.89rem; color: var(--ink-secondary);">
+              <li style="margin-bottom: 0.5rem;">
+                <strong>Degenerate Constant Limit (<span class="math">d ⇒ P</span>):</strong> If <span class="math">X<sub>n</sub> →<sup>d</sup> c</span> where <span class="math">c ∈ ℝ</span> is a non-random constant, then <span class="math">X<sub>n</sub> →<sup>P</sup> c</span>. (Used in WLLN proofs via characteristic functions!)
+              </li>
+              <li style="margin-bottom: 0.5rem;">
+                <strong>Fast Rate / Borel–Cantelli (<span class="math">P ⇒ a.s.</span>):</strong> If <span class="math">∑<sub>n=1</sub><sup>∞</sup> ℙ(|X<sub>n</sub> − X| &gt; ε) &lt; ∞</span> for all <span class="math">ε &gt; 0</span>, then <span class="math">X<sub>n</sub> →<sup>a.s.</sup> X</span>.
+              </li>
+              <li style="margin-bottom: 0.5rem;">
+                <strong>Uniform Integrability (<span class="math">P ⇒ L²</span>):</strong> If <span class="math">X<sub>n</sub> →<sup>P</sup> X</span> and <span class="math">{|X<sub>n</sub>|<sup>2</sup>}</span> is uniformly integrable (e.g., dominated by an integrable random variable), then <span class="math">X<sub>n</sub> →<sup>L²</sup> X</span>.
+              </li>
+              <li>
+                <strong>Skorokhod's Representation (<span class="math">d ⇒ a.s.</span> copy):</strong> If <span class="math">X<sub>n</sub> →<sup>d</sup> X</span>, there exist copies <span class="math">X̃<sub>n</sub> <sup>d</sup>= X<sub>n</sub></span> and <span class="math">X̃ <sup>d</sup>= X</span> on a common space with <span class="math">X̃<sub>n</sub> →<sup>a.s.</sup> X̃</span>.
+              </li>
+            </ul>
+          `,
+          interactive: false
+        }
+      };
+
+      // Precompute first 28 Typewriter sequence intervals
+      const twSequence = [];
+      for (let k = 1; k <= 7; k++) {
+        for (let j = 0; j < k; j++) {
+          twSequence.push({ n: twSequence.length + 1, k, j, start: j / k, end: (j + 1) / k });
+        }
+      }
+      let twIndex = 0;
+
+      function renderCounterexamplePanel(key) {
+        const panel = document.getElementById("ce-detail-panel");
+        const item = counterexamples[key];
+        let interactiveHtml = "";
+        if (item.interactive) {
+          const cur = twSequence[twIndex];
+          let cells = "";
+          for (let c = 0; c < 12; c++) {
+            const mid = (c + 0.5) / 12;
+            const active = mid >= cur.start && mid <= cur.end ? "on" : "";
+            cells += `<div class="tw-cell ${active}" title="[${(c / 12).toFixed(2)}, ${((c + 1) / 12).toFixed(2)}]"></div>`;
+          }
+          interactiveHtml = `
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700;">
+                <span>Index <span class="math">n = ${cur.n}</span> · Interval <span class="math">I<sub>${cur.n}</sub> = [${cur.j}/${cur.k}, ${cur.j + 1}/${cur.k}]</span></span>
+                <span style="color:var(--amber-dark);">ℙ(X<sub>${cur.n}</sub>=1) = 1/${cur.k} = ${(100 / cur.k).toFixed(1)}%</span>
+              </div>
+              <div class="typewriter-strip">${cells}</div>
+              <div style="display:flex; gap:0.5rem;">
+                <button type="button" class="btn-secondary" id="tw-prev">← Prev n</button>
+                <button type="button" class="btn-primary" id="tw-next">Next Step n →</button>
+              </div>
+            </div>
+          `;
+        }
+
+        panel.innerHTML = `
+          <div>
+            <span class="section-badge" style="background:${item.badgeColor}; color:#fff; border:none;">${item.badge}</span>
+            <h3 style="margin-top:0.65rem;">${item.title}</h3>
+            ${item.body}
+          </div>
+          ${interactiveHtml}
+        `;
+
+        if (item.interactive) {
+          document.getElementById("tw-next").addEventListener("click", () => {
+            twIndex = (twIndex + 1) % twSequence.length;
+            renderCounterexamplePanel(key);
+          });
+          document.getElementById("tw-prev").addEventListener("click", () => {
+            twIndex = (twIndex - 1 + twSequence.length) % twSequence.length;
+            renderCounterexamplePanel(key);
+          });
+        }
+      }
+
+      document.getElementById("ce-buttons").addEventListener("click", (e) => {
+        const btn = e.target.closest(".ce-btn");
+        if (!btn) return;
+        document.querySelectorAll("#ce-buttons .ce-btn").forEach((b) => {
+          b.classList.remove("active", "proof-active");
+        });
+        const key = btn.getAttribute("data-ce");
+        btn.classList.add(key === "upgrades" ? "proof-active" : "active");
+        renderCounterexamplePanel(key);
+      });
+
+      renderCounterexamplePanel("p-not-as");
+
+      /* ======================================================================
+         4. SIMULATOR 1: LLN & √n SCALING MONTE CARLO LABORATORY
+         ====================================================================== */
+      const sim1State = {
+        dist: "exponential",
+        n: 150,
+        visiblePaths: 20,
+        alpha: 0.5,
+        replicates: 1000,
+        pathsData: [],
+        scaledFinalValues: []
+      };
+
+      const distConfigs = {
+        bernoulli: {
+          mu: 0.3,
+          sigma: Math.sqrt(0.3 * 0.7),
+          eps: 0.08,
+          finite: true,
+          sample: () => (Math.random() < 0.3 ? 1 : 0)
+        },
+        uniform: {
+          mu: 0.5,
+          sigma: Math.sqrt(1 / 12),
+          eps: 0.05,
+          finite: true,
+          sample: () => Math.random()
+        },
+        exponential: {
+          mu: 1.0,
+          sigma: 1.0,
+          eps: 0.16,
+          finite: true,
+          sample: () => -Math.log(1 - Math.random())
+        },
+        cauchy: {
+          mu: 0.0, // Median/location = 0 for visual centering
+          sigma: Infinity,
+          eps: 0.5,
+          finite: false,
+          sample: () => Math.tan(Math.PI * (Math.random() - 0.5))
+        }
+      };
+
+      function runSim1MonteCarlo() {
+        const cfg = distConfigs[sim1State.dist];
+        const maxN = 500;
+        const R = sim1State.replicates;
+        const paths = [];
+        const allSeries = new Array(R);
+
+        for (let r = 0; r < R; r++) {
+          let sum = 0;
+          const runningMeans = new Float64Array(maxN);
+          for (let k = 0; k < maxN; k++) {
+            sum += cfg.sample();
+            runningMeans[k] = sum / (k + 1);
+          }
+          allSeries[r] = runningMeans;
+          if (r < 40) {
+            paths.push(runningMeans);
+          }
+        }
+        sim1State.allSeries = allSeries;
+        sim1State.pathsData = paths;
+        renderSim1();
+      }
+
+      function renderSim1() {
+        const cfg = distConfigs[sim1State.dist];
+        const n = sim1State.n;
+        const vis = sim1State.visiblePaths;
+        const alpha = sim1State.alpha;
+
+        // Compute cross-sectional values at sample size n
+        const finalMeans = new Float64Array(sim1State.replicates);
+        const scaledVals = new Float64Array(sim1State.replicates);
+        let insideEpsCount = 0;
+        const scaleFactor = Math.pow(n, alpha);
+
+        for (let r = 0; r < sim1State.replicates; r++) {
+          const m = sim1State.allSeries[r][n - 1];
+          finalMeans[r] = m;
+          if (Math.abs(m - cfg.mu) <= cfg.eps) insideEpsCount++;
+          scaledVals[r] = scaleFactor * (m - cfg.mu);
+        }
+
+        // Update Telemetry Readouts
+        document.getElementById("sim1-left-badge").textContent = cfg.finite
+          ? `ε = ±${cfg.eps.toFixed(2)} around μ`
+          : `Location x₀ = 0 (Mean Undefined)`;
+
+        if (!cfg.finite) {
+          document.getElementById("sim1-right-badge").textContent = "CLT Breakdown (σ² = ∞)";
+          document.getElementById("sim1-stat-mu").textContent = "Undefined (x₀=0)";
+          document.getElementById("sim1-stat-th-sd").textContent = "∞ (Undefined)";
+        } else {
+          document.getElementById("sim1-right-badge").textContent =
+            alpha === 0.5 ? "CLT Gaussian Regime" : alpha === 0 ? "LLN Collapse Regime" : "Over-Scaled Divergence";
+          document.getElementById("sim1-stat-mu").textContent = cfg.mu.toFixed(3);
+          const thSd = Math.pow(n, alpha - 0.5) * cfg.sigma;
+          document.getElementById("sim1-stat-th-sd").textContent = thSd.toFixed(3);
+        }
+
+        // Empirical SD of scaled values
+        let sumS = 0;
+        for (let i = 0; i < scaledVals.length; i++) sumS += scaledVals[i];
+        const meanS = sumS / scaledVals.length;
+        let sumSq = 0;
+        for (let i = 0; i < scaledVals.length; i++) {
+          const d = scaledVals[i] - meanS;
+          sumSq += d * d;
+        }
+        const empSd = Math.sqrt(sumSq / (scaledVals.length - 1));
+        document.getElementById("sim1-stat-emp-sd").textContent = empSd > 999 ? "> 999" : empSd.toFixed(3);
+        document.getElementById("sim1-stat-prob").textContent =
+          ((insideEpsCount / sim1State.replicates) * 100).toFixed(1) + "%";
+
+        drawLLNCanvas(cfg, n, vis);
+        drawCLTCanvas(cfg, n, alpha, scaledVals);
+      }
+
+      function drawLLNCanvas(cfg, n, vis) {
+        const canvas = document.getElementById("canvas-lln");
+        const { ctx, width, height } = setupHiDPICanvas(canvas);
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = { top: 20, right: 18, bottom: 32, left: 46 };
+        const plotW = width - pad.left - pad.right;
+        const plotH = height - pad.top - pad.bottom;
+
+        // Y-axis range
+        let yMin, yMax;
+        if (cfg.finite) {
+          const span = Math.max(cfg.eps * 3.2, cfg.sigma * 1.45);
+          yMin = cfg.mu - span;
+          yMax = cfg.mu + span;
+        } else {
+          yMin = -8;
+          yMax = 8;
+        }
+
+        const toX = (k) => pad.left + ((k - 1) / Math.max(1, n - 1)) * plotW;
+        const toY = (val) => {
+          const clamped = Math.max(yMin, Math.min(yMax, val));
+          return pad.top + ((yMax - clamped) / (yMax - yMin)) * plotH;
+        };
+
+        // Grid lines
+        ctx.strokeStyle = "#f1f5f9";
+        ctx.lineWidth = 1;
+        for (let g = 0; g <= 4; g++) {
+          const gy = pad.top + (g / 4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, gy);
+          ctx.lineTo(pad.left + plotW, gy);
+          ctx.stroke();
+
+          const yVal = yMax - (g / 4) * (yMax - yMin);
+          ctx.fillStyle = "#64748b";
+          ctx.font = "11px ui-monospace, monospace";
+          ctx.textAlign = "right";
+          ctx.fillText(yVal.toFixed(2), pad.left - 6, gy + 4);
+        }
+
+        // Shaded ±ε band around μ
+        const yTopEps = toY(cfg.mu + cfg.eps);
+        const yBotEps = toY(cfg.mu - cfg.eps);
+        ctx.fillStyle = "rgba(37, 99, 235, 0.08)";
+        ctx.fillRect(pad.left, yTopEps, plotW, Math.max(2, yBotEps - yTopEps));
+
+        // Sample paths
+        for (let p = 0; p < vis; p++) {
+          const series = sim1State.pathsData[p];
+          const endVal = series[n - 1];
+          const inside = Math.abs(endVal - cfg.mu) <= cfg.eps;
+          ctx.strokeStyle = inside ? "rgba(5, 150, 105, 0.52)" : "rgba(217, 119, 6, 0.72)";
+          ctx.lineWidth = inside ? 1.35 : 1.7;
+          ctx.beginPath();
+          for (let k = 0; k < n; k++) {
+            const px = toX(k + 1);
+            const py = toY(series[k]);
+            if (k === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+
+        // True mean horizontal dashed line
+        const yMu = toY(cfg.mu);
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yMu);
+        ctx.lineTo(pad.left + plotW, yMu);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Axis labels
+        ctx.fillStyle = "#475569";
+        ctx.font = "600 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`Sample Index k = 1 … ${n}`, pad.left + plotW / 2, height - 8);
+      }
+
+      function drawCLTCanvas(cfg, n, alpha, scaledVals) {
+        const canvas = document.getElementById("canvas-clt");
+        const { ctx, width, height } = setupHiDPICanvas(canvas);
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = { top: 20, right: 18, bottom: 32, left: 42 };
+        const plotW = width - pad.left - pad.right;
+        const plotH = height - pad.top - pad.bottom;
+
+        // Fixed reference window so scaling collapse/explosion is dramatically visible!
+        const refSigma = cfg.finite ? cfg.sigma : 2.0;
+        const xBound = Math.max(1.2, 3.6 * refSigma);
+        const xMin = -xBound;
+        const xMax = xBound;
+
+        const numBins = 32;
+        const binWidth = (xMax - xMin) / numBins;
+        const counts = new Array(numBins).fill(0);
+        let inWindow = 0;
+
+        for (let i = 0; i < scaledVals.length; i++) {
+          const v = scaledVals[i];
+          if (v >= xMin && v < xMax) {
+            const idx = Math.floor((v - xMin) / binWidth);
+            counts[idx]++;
+            inWindow++;
+          }
+        }
+
+        // Convert counts to density
+        const densities = counts.map((c) => c / (scaledVals.length * binWidth));
+        const peakGaussian = cfg.finite ? 1 / (Math.sqrt(2 * Math.PI) * refSigma) : 0.35;
+        let maxDens = peakGaussian * 1.35;
+        for (let b = 0; b < numBins; b++) {
+          if (densities[b] > maxDens) maxDens = Math.min(densities[b] * 1.1, peakGaussian * 4.5);
+        }
+
+        const toX = (val) => pad.left + ((val - xMin) / (xMax - xMin)) * plotW;
+        const toY = (d) => pad.top + plotH - (Math.min(d, maxDens) / maxDens) * plotH;
+
+        // Baseline & zero line
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.moveTo(toX(0), pad.top);
+        ctx.lineTo(toX(0), pad.top + plotH);
+        ctx.stroke();
+
+        // Draw Histogram Bars
+        for (let b = 0; b < numBins; b++) {
+          const bx = pad.left + b * (plotW / numBins);
+          const bw = plotW / numBins - 1.5;
+          const by = toY(densities[b]);
+          const bh = pad.top + plotH - by;
+          ctx.fillStyle = alpha === 0.5 && cfg.finite ? "rgba(5, 150, 105, 0.32)" : "rgba(217, 119, 6, 0.35)";
+          ctx.strokeStyle = alpha === 0.5 && cfg.finite ? "#059669" : "#d97706";
+          ctx.lineWidth = 1;
+          if (bh > 0) {
+            ctx.fillRect(bx, by, Math.max(1, bw), bh);
+            ctx.strokeRect(bx, by, Math.max(1, bw), bh);
+          }
+        }
+
+        // Overlay Theoretical N(0, σ²) Density Curve (when finite variance)
+        if (cfg.finite) {
+          ctx.strokeStyle = "#2563eb";
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          const steps = 140;
+          for (let s = 0; s <= steps; s++) {
+            const xv = xMin + (s / steps) * (xMax - xMin);
+            const pdf =
+              (1 / (Math.sqrt(2 * Math.PI) * refSigma)) *
+              Math.exp(-0.5 * Math.pow(xv / refSigma, 2));
+            const px = toX(xv);
+            const py = toY(pdf);
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+
+        // X-axis ticks
+        ctx.fillStyle = "#64748b";
+        ctx.font = "11px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        [-xBound * 0.75, 0, xBound * 0.75].forEach((tick) => {
+          ctx.fillText(tick.toFixed(2), toX(tick), pad.top + plotH + 14);
+        });
+
+        ctx.fillStyle = "#475569";
+        ctx.font = "600 11px sans-serif";
+        ctx.fillText(
+          cfg.finite
+            ? `Blue Curve: 𝒩(0, σ²) Limit · Bars: Empirical n^${alpha}(X̄ₙ − μ)`
+            : `Cauchy has no mean/variance: ${((inWindow / scaledVals.length) * 100).toFixed(0)}% inside view`,
+          pad.left + plotW / 2,
+          height - 6
+        );
+      }
+
+      // Bind Simulator 1 Controls
+      document.getElementById("sim1-dist").addEventListener("change", (e) => {
+        sim1State.dist = e.target.value;
+        runSim1MonteCarlo();
+      });
+      document.getElementById("sim1-n").addEventListener("input", (e) => {
+        sim1State.n = parseInt(e.target.value, 10);
+        document.getElementById("sim1-n-val").textContent = sim1State.n;
+        renderSim1();
+      });
+      document.getElementById("sim1-paths").addEventListener("input", (e) => {
+        sim1State.visiblePaths = parseInt(e.target.value, 10);
+        document.getElementById("sim1-paths-val").textContent = sim1State.visiblePaths;
+        renderSim1();
+      });
+      document.getElementById("sim1-alpha").addEventListener("change", (e) => {
+        sim1State.alpha = parseFloat(e.target.value);
+        const label =
+          sim1State.alpha === 0.5
+            ? "α = 0.50 (√n CLT)"
+            : sim1State.alpha === 0
+            ? "α = 0.00 (Unscaled)"
+            : "α = 0.85 (Over-scaled)";
+        document.getElementById("sim1-alpha-val").textContent = label;
+        renderSim1();
+      });
+      document.getElementById("sim1-resim-btn").addEventListener("click", runSim1MonteCarlo);
+
+      /* ======================================================================
+         5. SIMULATOR 2: BAYESIAN BETA-BINOMIAL & DIAGNOSTIC LAB
+         ====================================================================== */
+      const bayesState = {
+        a0: 2.0,
+        b0: 8.0,
+        n: 20,
+        k: 9
+      };
+
+      function syncBayesControlsToUI() {
+        const a0El = document.getElementById("beta-a0");
+        const b0El = document.getElementById("beta-b0");
+        const nEl = document.getElementById("beta-n");
+        const kEl = document.getElementById("beta-k");
+
+        a0El.value = bayesState.a0;
+        b0El.value = bayesState.b0;
+        nEl.value = bayesState.n;
+        kEl.max = bayesState.n;
+        if (bayesState.k > bayesState.n) bayesState.k = bayesState.n;
+        kEl.value = bayesState.k;
+
+        document.getElementById("beta-a0-val").textContent = bayesState.a0.toFixed(1);
+        document.getElementById("beta-b0-val").textContent = bayesState.b0.toFixed(1);
+        document.getElementById("beta-n-val").textContent = bayesState.n;
+        document.getElementById("beta-k-val").textContent = bayesState.k;
+
+        updateBayesLab();
+      }
+
+      function updateBayesLab() {
+        const { a0, b0, n, k } = bayesState;
+        const aPost = a0 + k;
+        const bPost = b0 + (n - k);
+
+        const priorMean = a0 / (a0 + b0);
+        const mle = k / n;
+        const postMean = aPost / (aPost + bPost);
+        const mapEst =
+          aPost > 1 && bPost > 1
+            ? ((aPost - 1) / (aPost + bPost - 2)).toFixed(3)
+            : aPost <= 1 && bPost > 1
+            ? "0.000 (Boundary)"
+            : bPost <= 1 && aPost > 1
+            ? "1.000 (Boundary)"
+            : "Bimodal";
+
+        const ciLow = betaQuantile(0.025, aPost, bPost);
+        const ciHigh = betaQuantile(0.975, aPost, bPost);
+
+        const dataWeight = n / (n + a0 + b0);
+        const priorWeight = 1 - dataWeight;
+
+        document.getElementById("beta-post-params").textContent = `Posterior: Beta(${aPost.toFixed(1)}, ${bPost.toFixed(1)})`;
+        document.getElementById("bayes-stat-prior").textContent = priorMean.toFixed(3);
+        document.getElementById("bayes-stat-mle").textContent = mle.toFixed(3);
+        document.getElementById("bayes-stat-post").textContent = postMean.toFixed(3);
+        document.getElementById("bayes-stat-map").textContent = mapEst;
+        document.getElementById("bayes-stat-ci").textContent = `[${ciLow.toFixed(3)}, ${ciHigh.toFixed(3)}]`;
+
+        document.getElementById("weight-data-label").textContent =
+          `Empirical Data Weight w = ${(dataWeight * 100).toFixed(1)}% (n = ${n})`;
+        document.getElementById("weight-prior-label").textContent =
+          `Prior Weight (1 − w) = ${(priorWeight * 100).toFixed(1)}% (α₀+β₀ = ${(a0 + b0).toFixed(1)})`;
+        document.getElementById("weight-bar-data").style.width = `${(dataWeight * 100).toFixed(1)}%`;
+        document.getElementById("weight-bar-prior").style.width = `${(priorWeight * 100).toFixed(1)}%`;
+
+        drawBayesCanvas(a0, b0, n, k, aPost, bPost, priorMean, mle, postMean, ciLow, ciHigh);
+      }
+
+      function drawBayesCanvas(a0, b0, n, k, aPost, bPost, priorMean, mle, postMean, ciLow, ciHigh) {
+        const canvas = document.getElementById("canvas-bayes");
+        const { ctx, width, height } = setupHiDPICanvas(canvas);
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = { top: 26, right: 20, bottom: 36, left: 44 };
+        const plotW = width - pad.left - pad.right;
+        const plotH = height - pad.top - pad.bottom;
+
+        const steps = 240;
+        const xs = new Float64Array(steps + 1);
+        const priorYs = new Float64Array(steps + 1);
+        const postYs = new Float64Array(steps + 1);
+        const likeRaw = new Float64Array(steps + 1);
+
+        let maxPrior = 0;
+        let maxPost = 0;
+        let maxLike = 0;
+
+        for (let i = 0; i <= steps; i++) {
+          const theta = 0.002 + (i / steps) * 0.996;
+          xs[i] = theta;
+          const p0 = betaPdf(theta, a0, b0);
+          const p1 = betaPdf(theta, aPost, bPost);
+          // Log-likelihood shifted by peak at mle for numerical stability
+          let lk = 0;
+          if (k === 0) lk = Math.pow(1 - theta, n);
+          else if (k === n) lk = Math.pow(theta, n);
+          else {
+            const logL =
+              k * Math.log(theta / mle) + (n - k) * Math.log((1 - theta) / (1 - mle));
+            lk = Math.exp(logL);
+          }
+          priorYs[i] = p0;
+          postYs[i] = p1;
+          likeRaw[i] = lk;
+          if (isFinite(p0) && p0 > maxPrior) maxPrior = p0;
+          if (isFinite(p1) && p1 > maxPost) maxPost = p1;
+          if (isFinite(lk) && lk > maxLike) maxLike = lk;
+        }
+
+        const yMax = Math.max(3.0, Math.min(24, Math.max(maxPrior, maxPost) * 1.18));
+        // Scale likelihood peak to 82% of yMax so shape is clearly comparable on same axis
+        const likeScale = maxLike > 0 ? (yMax * 0.82) / maxLike : 1;
+
+        const toX = (theta) => pad.left + theta * plotW;
+        const toY = (val) => pad.top + plotH - (Math.min(val, yMax) / yMax) * plotH;
+
+        // Horizontal grid lines
+        ctx.strokeStyle = "#f1f5f9";
+        ctx.lineWidth = 1;
+        for (let g = 0; g <= 4; g++) {
+          const gy = pad.top + (g / 4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, gy);
+          ctx.lineTo(pad.left + plotW, gy);
+          ctx.stroke();
+
+          const yVal = yMax * (1 - g / 4);
+          ctx.fillStyle = "#64748b";
+          ctx.font = "11px ui-monospace, monospace";
+          ctx.textAlign = "right";
+          ctx.fillText(yVal.toFixed(1), pad.left - 6, gy + 4);
+        }
+
+        // 1. Shaded 95% Credible Interval under Posterior
+        ctx.fillStyle = "rgba(5, 150, 105, 0.16)";
+        ctx.beginPath();
+        let startedCI = false;
+        for (let i = 0; i <= steps; i++) {
+          if (xs[i] >= ciLow && xs[i] <= ciHigh) {
+            const px = toX(xs[i]);
+            const py = toY(postYs[i]);
+            if (!startedCI) {
+              ctx.moveTo(px, pad.top + plotH);
+              ctx.lineTo(px, py);
+              startedCI = true;
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+        }
+        if (startedCI) {
+          ctx.lineTo(toX(ciHigh), pad.top + plotH);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // 2. Prior Curve (Dashed Slate/Indigo)
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const px = toX(xs[i]);
+          const py = toY(priorYs[i]);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 3. Scaled Likelihood Curve (Amber)
+        ctx.strokeStyle = "#d97706";
+        ctx.lineWidth = 2.1;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const px = toX(xs[i]);
+          const py = toY(likeRaw[i] * likeScale);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        // 4. Posterior Curve (Solid Emerald)
+        ctx.strokeStyle = "#059669";
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const px = toX(xs[i]);
+          const py = toY(postYs[i]);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        // Vertical markers for Prior Mean, MLE, Posterior Mean
+        const markers = [
+          { val: priorMean, color: "#475569", label: "μ₀" },
+          { val: mle, color: "#d97706", label: "MLE" },
+          { val: postMean, color: "#059669", label: "Post" }
+        ];
+        markers.forEach((m) => {
+          const mx = toX(m.val);
+          ctx.strokeStyle = m.color;
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(mx, pad.top);
+          ctx.lineTo(mx, pad.top + plotH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+
+        // Legend in top-right of canvas
+        const legX = pad.left + 12;
+        const legY = pad.top + 8;
+        ctx.font = "600 11px sans-serif";
+        ctx.textAlign = "left";
+
+        ctx.fillStyle = "#475569";
+        ctx.fillText("--- Prior p(θ)", legX, legY + 6);
+        ctx.fillStyle = "#d97706";
+        ctx.fillText("— Scaled Likelihood ℒ(θ|k)", legX + 95, legY + 6);
+        ctx.fillStyle = "#059669";
+        ctx.fillText("— Posterior p(θ|k) & 95% CI", legX + 260, legY + 6);
+
+        // X-axis ticks
+        ctx.fillStyle = "#64748b";
+        ctx.font = "11px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((t) => {
+          ctx.fillText(t.toFixed(1), toX(t), pad.top + plotH + 15);
+        });
+        ctx.fillStyle = "#475569";
+        ctx.font = "600 11px sans-serif";
+        ctx.fillText("Parameter θ ∈ [0, 1]", pad.left + plotW / 2, height - 6);
+      }
+
+      // Bind Tab A Controls
+      document.getElementById("beta-a0").addEventListener("input", (e) => {
+        bayesState.a0 = parseFloat(e.target.value);
+        syncBayesControlsToUI();
+      });
+      document.getElementById("beta-b0").addEventListener("input", (e) => {
+        bayesState.b0 = parseFloat(e.target.value);
+        syncBayesControlsToUI();
+      });
+      document.getElementById("beta-n").addEventListener("input", (e) => {
+        bayesState.n = parseInt(e.target.value, 10);
+        syncBayesControlsToUI();
+      });
+      document.getElementById("beta-k").addEventListener("input", (e) => {
+        bayesState.k = parseInt(e.target.value, 10);
+        syncBayesControlsToUI();
+      });
+
+      document.querySelectorAll("[data-preset]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const p = btn.getAttribute("data-preset");
+          if (p === "uniform") { bayesState.a0 = 1; bayesState.b0 = 1; }
+          if (p === "skeptical") { bayesState.a0 = 4; bayesState.b0 = 16; }
+          if (p === "strong") { bayesState.a0 = 20; bayesState.b0 = 20; }
+          if (p === "jeffreys") { bayesState.a0 = 0.5; bayesState.b0 = 0.5; }
+          syncBayesControlsToUI();
+        });
+      });
+
+      document.getElementById("btn-seq-batch").addEventListener("click", () => {
+        // Promote current posterior to new prior, then simulate 10 new trials at θ_true = 0.45
+        const newA0 = Math.min(40, bayesState.a0 + bayesState.k);
+        const newB0 = Math.min(40, bayesState.b0 + (bayesState.n - bayesState.k));
+        let newSuccesses = 0;
+        for (let i = 0; i < 10; i++) {
+          if (Math.random() < 0.45) newSuccesses++;
+        }
+        bayesState.a0 = newA0;
+        bayesState.b0 = newB0;
+        bayesState.n = 10;
+        bayesState.k = newSuccesses;
+        syncBayesControlsToUI();
+        showToast(`Sequential Update: Posterior promoted to Prior; observed ${newSuccesses}/10 new successes.`);
+      });
+
+      /* ======================================================================
+         6. TAB B: DIAGNOSTIC BAYES & BASE RATE EXPLORER
+         ====================================================================== */
+      const diagState = {
+        prev: 0.01,
+        sens: 0.99,
+        fpr: 0.05
+      };
+
+      function updateDiagLab() {
+        const { prev, sens, fpr } = diagState;
+        const tp = prev * sens;
+        const fn = prev * (1 - sens);
+        const fp = (1 - prev) * fpr;
+        const tn = (1 - prev) * (1 - fpr);
+        const evidence = tp + fp;
+        const post = evidence > 0 ? tp / evidence : 0;
+        const lr = fpr > 0 ? sens / fpr : Infinity;
+
+        document.getElementById("diag-prev").value = (prev * 100).toFixed(1);
+        document.getElementById("diag-sens").value = (sens * 100).toFixed(1);
+        document.getElementById("diag-fpr").value = (fpr * 100).toFixed(1);
+
+        document.getElementById("diag-prev-val").textContent = (prev * 100).toFixed(1) + "%";
+        document.getElementById("diag-sens-val").textContent = (sens * 100).toFixed(1) + "%";
+        document.getElementById("diag-fpr-val").textContent = (fpr * 100).toFixed(1) + "%";
+
+        document.getElementById("diag-caption-post").textContent = `Posterior ℙ(H | E) = ${(post * 100).toFixed(2)}%`;
+        document.getElementById("diag-stat-prior").textContent = (prev * 100).toFixed(2) + "%";
+        document.getElementById("diag-stat-ev").textContent = (evidence * 100).toFixed(2) + "%";
+        document.getElementById("diag-stat-post").textContent = (post * 100).toFixed(2) + "%";
+        document.getElementById("diag-stat-lr").textContent = lr.toFixed(2) + "×";
+
+        drawDiagCanvas(tp, fn, fp, tn, post);
+      }
+
+      function drawDiagCanvas(tp, fn, fp, tn, post) {
+        const canvas = document.getElementById("canvas-diag");
+        const { ctx, width, height } = setupHiDPICanvas(canvas);
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = 18;
+        const barH = 44;
+        const barW = width - pad * 2;
+
+        // Top Bar: Full Population (1,000 subjects)
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "700 12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("1. Full Population Joint Probabilities (1,000 Subjects):", pad, pad + 12);
+
+        const segs = [
+          { label: `TP: ${(tp * 1000).toFixed(1)}`, prob: tp, color: "#059669" },
+          { label: `FP: ${(fp * 1000).toFixed(1)}`, prob: fp, color: "#d97706" },
+          { label: `FN: ${(fn * 1000).toFixed(1)}`, prob: fn, color: "#e11d48" },
+          { label: `TN: ${(tn * 1000).toFixed(1)}`, prob: tn, color: "#cbd5e1" }
+        ];
+
+        let curX = pad;
+        const y1 = pad + 22;
+        segs.forEach((s) => {
+          const w = Math.max(s.prob > 0 ? 3 : 0, s.prob * barW);
+          ctx.fillStyle = s.color;
+          ctx.fillRect(curX, y1, w, barH);
+          curX += w;
+        });
+
+        // Legend under Bar 1
+        let legX = pad;
+        const legY = y1 + barH + 18;
+        ctx.font = "600 11px sans-serif";
+        segs.forEach((s) => {
+          ctx.fillStyle = s.color;
+          ctx.fillRect(legX, legY - 9, 10, 10);
+          ctx.fillStyle = "#334155";
+          ctx.fillText(s.label, legX + 14, legY);
+          legX += Math.min(135, (width - pad * 2) / 4);
+        });
+
+        // Bottom Bar: Conditioned on Positive Test E (Renormalized Sample Space!)
+        const y2Title = legY + 34;
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "700 12px sans-serif";
+        ctx.fillText("2. Conditioned on Positive Evidence E (Renormalized Sample Space):", pad, y2Title);
+
+        const y2 = y2Title + 12;
+        const tpShareW = post * barW;
+        const fpShareW = (1 - post) * barW;
+
+        ctx.fillStyle = "#059669";
+        ctx.fillRect(pad, y2, tpShareW, barH + 6);
+        ctx.fillStyle = "#d97706";
+        ctx.fillRect(pad + tpShareW, y2, fpShareW, barH + 6);
+
+        // Text inside conditioned bar
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "700 12px sans-serif";
+        if (tpShareW > 95) {
+          ctx.textAlign = "center";
+          ctx.fillText(`True Positives: ${(post * 100).toFixed(1)}%`, pad + tpShareW / 2, y2 + 29);
+        }
+        if (fpShareW > 105) {
+          ctx.textAlign = "center";
+          ctx.fillText(`False Positives: ${((1 - post) * 100).toFixed(1)}%`, pad + tpShareW + fpShareW / 2, y2 + 29);
+        }
+      }
+
+      document.getElementById("diag-prev").addEventListener("input", (e) => {
+        diagState.prev = parseFloat(e.target.value) / 100;
+        updateDiagLab();
+      });
+      document.getElementById("diag-sens").addEventListener("input", (e) => {
+        diagState.sens = parseFloat(e.target.value) / 100;
+        updateDiagLab();
+      });
+      document.getElementById("diag-fpr").addEventListener("input", (e) => {
+        diagState.fpr = parseFloat(e.target.value) / 100;
+        updateDiagLab();
+      });
+
+      document.querySelectorAll("[data-diag]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const mode = btn.getAttribute("data-diag");
+          if (mode === "rare") { diagState.prev = 0.01; diagState.sens = 0.99; diagState.fpr = 0.05; }
+          if (mode === "moderate") { diagState.prev = 0.15; diagState.sens = 0.95; diagState.fpr = 0.05; }
+          if (mode === "high") { diagState.prev = 0.40; diagState.sens = 0.92; diagState.fpr = 0.06; }
+          updateDiagLab();
+        });
+      });
+
+      document.getElementById("btn-second-test").addEventListener("click", () => {
+        const { prev, sens, fpr } = diagState;
+        const post = (prev * sens) / (prev * sens + (1 - prev) * fpr);
+        diagState.prev = Math.min(0.999, post);
+        updateDiagLab();
+        showToast(`2nd Positive Test Applied: Prior updated to ${(diagState.prev * 100).toFixed(2)}%.`);
+      });
+
+      /* ======================================================================
+         7. LAB TABS, FORMULA DRAWER, CLIPBOARD & RESIZE HANDLING
+         ====================================================================== */
+      const tabBtnBeta = document.getElementById("tab-btn-beta");
+      const tabBtnDiag = document.getElementById("tab-btn-diag");
+      const tabPaneBeta = document.getElementById("tab-pane-beta");
+      const tabPaneDiag = document.getElementById("tab-pane-diag");
+
+      tabBtnBeta.addEventListener("click", () => {
+        tabBtnBeta.classList.add("active");
+        tabBtnDiag.classList.remove("active");
+        tabPaneBeta.classList.add("active");
+        tabPaneDiag.classList.remove("active");
+        updateBayesLab();
+      });
+
+      tabBtnDiag.addEventListener("click", () => {
+        tabBtnDiag.classList.add("active");
+        tabBtnBeta.classList.remove("active");
+        tabPaneDiag.classList.add("active");
+        tabPaneBeta.classList.remove("active");
+        updateDiagLab();
+      });
+
+      // Formula Reference Drawer
+      const drawer = document.getElementById("formula-drawer");
+      const backdrop = document.getElementById("drawer-backdrop");
+      function openDrawer() {
+        drawer.classList.add("open");
+        backdrop.classList.add("open");
+      }
+      function closeDrawer() {
+        drawer.classList.remove("open");
+        backdrop.classList.remove("open");
+      }
+      document.getElementById("open-drawer-btn").addEventListener("click", openDrawer);
+      document.getElementById("close-drawer-btn").addEventListener("click", closeDrawer);
+      backdrop.addEventListener("click", closeDrawer);
+
+      // Copy-to-Clipboard via execCommand('copy')
+      let toastTimer = null;
+      function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.textContent = msg;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+      }
+
+      document.querySelectorAll(".copy-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const text = chip.getAttribute("data-copy");
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand("copy");
+            showToast("Formula copied to clipboard");
+          } catch (err) {
+            showToast("Formula selected");
+          }
+          document.body.removeChild(ta);
+        });
+      });
+
+      // Active Module Scroll Highlight
+      const navM1 = document.getElementById("nav-m1");
+      const navM2 = document.getElementById("nav-m2");
+      const mod2El = document.getElementById("module-2");
+      window.addEventListener("scroll", () => {
+        const rect2 = mod2El.getBoundingClientRect();
+        if (rect2.top <= 160) {
+          navM1.classList.remove("active-m1");
+          navM2.classList.add("active-m2");
+        } else {
+          navM2.classList.remove("active-m2");
+          navM1.classList.add("active-m1");
+        }
+      }, { passive: true });
+
+      // Responsive Canvas Redraw on Window Resize
+      let resizeTimer = null;
+      window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          renderSim1();
+          if (tabPaneBeta.classList.contains("active")) updateBayesLab();
+          if (tabPaneDiag.classList.contains("active")) updateDiagLab();
+        }, 100);
+      });
+
+      // Initial Boot
+      window.addEventListener("load", () => {
+        runSim1MonteCarlo();
+        syncBayesControlsToUI();
+        updateDiagLab();
+      });
+    })();
+  </script>
+</body>
+</html>
